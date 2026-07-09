@@ -1,0 +1,1 @@
+{"name": "PassFail 2 Remove the Easy and Hard buttons", "mod": 1717466194, "min_point_version": 15, "max_point_version": 66, "branch_index": 0, "disabled": false, "conflicts": [], "update_enabled": true, "config": {"toggle_names_textcolors": "0", "again_button_name": "Fail", "good_button_name": "Pass", "again_button_textcolor": "#000000", "good_button_textcolor": "#000000"}}
