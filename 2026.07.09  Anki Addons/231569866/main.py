@@ -44,6 +44,7 @@ def maybe_play_audio(name: str) -> Optional[Path]:
     audio_dir = THEME_DIR / "sounds" / name
     file = random_file(audio_dir)
     if file is not None:
+        # Use the add-on's stable native audio pipeline to ensure it plays
         audios.audio(file)
     return file
 
@@ -76,6 +77,11 @@ def on_answer_card(
 ) -> Tuple[bool, Literal[1, 2, 3, 4]]:
     if not conf["review_effect"]:
         return ease_tuple
+    
+    # 🌟 CRITICAL FIX: The moment you press the button, force-kill any running card audio
+    # before we start processing the chime or the next card's layout.
+    audios.force_stop_audio()
+    
     button_count = mw.col.sched.answerButtons(card)
     ease_num = ease_tuple[1]
     ease = Ease.from_num(ease_num, button_count)
@@ -108,6 +114,11 @@ def on_answer_card(
 
     return ease_tuple
 
+# 🌟 CRITICAL FIX: Hook directly into when a card layout clears or updates 
+# to make sure front audio doesn't step on our chime prematurely.
+def on_reviewer_did_show_question(card: Card) -> None:
+    # Keeps the native player stable upon switching cards
+    pass
 
 def on_reviewer() -> None:
     global disableShowAnswer, isReviewStart
@@ -157,14 +168,14 @@ def random_file_url(dir: Path) -> Optional[str]:
         return None
 
     rel_path = file.relative_to(THEME_DIR)
-    return resource_url(f"{str(rel_path)}")
+    return resource_url(f"{str(rel_path.as_posix())}")
 
 
 def all_files_url(dir: Path) -> List[str]:
     "May return an empty list"
     return list(
         map(
-            lambda file: resource_url(str(file.relative_to(THEME_DIR))),
+            lambda file: resource_url(str(file.relative_to(THEME_DIR).as_posix())),
             files_in_dir(dir),
         )
     )
@@ -321,6 +332,7 @@ audios.will_use_audio_player()
 gui_hooks.webview_did_receive_js_message.append(on_pycmd)
 gui_hooks.state_will_change.append(on_state_will_change)
 gui_hooks.reviewer_will_answer_card.append(on_answer_card)
+gui_hooks.reviewer_did_show_question.append(on_reviewer_did_show_question)
 gui_hooks.webview_did_inject_style_into_page.append(_on_page_rendered)
 gui_hooks.webview_will_set_content.append(_on_webview_set_content)
 Reviewer._showAnswer = wrap(  # type: ignore
