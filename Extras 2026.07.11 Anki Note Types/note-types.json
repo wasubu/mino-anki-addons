@@ -710,7 +710,7 @@
     {
       "name": "Mouse hover",
       "type": 0,
-      "css": ".card {\n    font-family: arial;\n    font-size: 20px;\n    text-align: center;\n    color: black;\n    background-color: white;\n}\n\n#content {\n   \n  }\n\n/*\n#cont {\n   color: blue;\n   text-decoration: underline;\n   cursor: pointer\n}\n*/\n\n.hovertext:before {\n   content: attr(data-hover);\n   display: inline-block;\n   position: absolute;\n   left: 50%;\n   transform: translate(-50%, 2.2em);\n   width: max-content;\n   max-width: 80%;\n   background-color: black;\n   color: white;\n   padding: 4px 8px;\n   margin-left: 8px;\n   visibility: hidden;\n   opacity: 0;\n\t border-radius: 25px;\n   font-weight: bold;\n   transition: opacity 0.5s ease-in-out;\n  }\n\n.hovertext:hover:before {\n  opacity: 1;\n  visibility: visible;\n}\n\n\n",
+      "css": ".card {\n    font-family: arial;\n    font-size: 20px;\n    text-align: center;\n    color: black;\n    background-color: white;\n}\n\n#content {\n   \n  }\n\n/*\n#cont {\n   color: blue;\n   text-decoration: underline;\n   cursor: pointer\n}\n*/\n\n.hovertext:before {\n   content: attr(data-hover);\n   display: inline-block;\n   position: absolute;\n   left: 50%;\n   transform: translate(-50%, 2.2em);\n   width: max-content;\n   max-width: 80%;\n   background-color: black;\n   color: white;\n   padding: 4px 15px;\n   margin-left: 8px;\n   visibility: hidden;\n   opacity: 0;\n\t border-radius: 20px;\n   font-weight: bold;\n   transition: opacity 0.5s ease-in-out;\n  }\n\n.hovertext:hover:before {\n  opacity: 1;\n  visibility: visible;\n}\n\n\n",
       "latex_pre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
       "latex_post": "\\end{document}",
       "latex_svg": false,
@@ -757,7 +757,7 @@
         {
           "name": "Cartão 1",
           "ord": 0,
-          "qfmt": "<div id=\"cont1\">{{Front}}</div>\n<script>\n// Get the element containing the content\nvar containerDiv = document.getElementById(\"cont1\");\n\n// Get the current HTML content\nvar htmlContent = containerDiv.innerHTML;\n\n// Replace '[' with the opening span tag\n// Note: '[' is a special character in regex, so we escape it with '\\'\nhtmlContent = htmlContent.replace(/\\[/g, '<span id=\"cont\" class=\"hovertext\" data-hover=\"{{hover 1}}\">');\n\n// Replace ']' with the closing span tag\n// Note: ']' is a special character in regex, so we escape it with '\\'\nhtmlContent = htmlContent.replace(/\\]/g, '</span>');\n\n// Update the element's innerHTML with the modified content\ncontainerDiv.innerHTML = htmlContent;\n</script>",
+          "qfmt": "<div id=\"cont1\">{{Front}}</div>\n\n<script>\n// Get the element containing the content\nvar containerDiv = document.getElementById(\"cont1\");\n\n// Get the current HTML content\nvar htmlContent = containerDiv.innerHTML;\n\n// Replace '[' with the opening span tag containing the bold weight and custom RGB color\nhtmlContent = htmlContent.replace(/\\[/g, '<span id=\"cont\" class=\"hovertext\" style=\"font-weight: bold; color: rgb(0, 179, 255);\" data-hover=\"{{hover 1}}\">');\n\n// Replace ']' with the closing span tag\nhtmlContent = htmlContent.replace(/\\]/g, '</span>');\n\n// Update the element's innerHTML with the modified content\ncontainerDiv.innerHTML = htmlContent;\n</script>",
           "afmt": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}",
           "bqfmt": "{{Front}}",
           "bafmt": ""
@@ -1078,7 +1078,7 @@
     }
   ],
   "metadata": {
-    "exported_at": "2026-07-11T09:38:59.150673Z",
+    "exported_at": "2026-07-14T12:38:27.643974Z",
     "anki_version": "25.09.4",
     "addon_version": "1.0.0",
     "count": 15
