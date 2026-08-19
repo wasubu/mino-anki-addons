@@ -2,7 +2,16 @@
 
 These are the addons I use for Anki.
 
-## How to import / export note types
+## How I export anki addons
+
+1. open anki
+2. go to Tools > Add-ons
+3. take a screenshot of the addons
+4. put the img to the root of "YYYY.MM.DD Anki Addons"
+5. go back to Add-ons window
+6. click on View Files
+
+## How to import / export anki note types
 
 found this neat anki addon that allows you to import / export your note types.
 https://ankiweb.net/shared/info/1513387587
