@@ -376,7 +376,7 @@
           "ord": 2,
           "font": "Arial",
           "size": 30,
-          "sticky": false,
+          "sticky": true,
           "rtl": false,
           "description": "",
           "plainText": false,
@@ -733,7 +733,7 @@
           "ord": 1,
           "font": "Arial",
           "size": 20,
-          "sticky": false,
+          "sticky": true,
           "rtl": false,
           "description": "",
           "plainText": false,
@@ -745,7 +745,7 @@
           "ord": 2,
           "font": "Arial",
           "size": 20,
-          "sticky": false,
+          "sticky": true,
           "rtl": false,
           "description": "show this text when hovered",
           "plainText": false,
@@ -759,6 +759,51 @@
           "ord": 0,
           "qfmt": "<div id=\"cont1\">{{Front}}</div>\n\n<script>\n// Get the element containing the content\nvar containerDiv = document.getElementById(\"cont1\");\n\n// Get the current HTML content\nvar htmlContent = containerDiv.innerHTML;\n\n// Replace '[' with the opening span tag containing the bold weight and custom RGB color\nhtmlContent = htmlContent.replace(/\\[/g, '<span id=\"cont\" class=\"hovertext\" style=\"font-weight: bold; color: rgb(0, 179, 255);\" data-hover=\"{{hover 1}}\">');\n\n// Replace ']' with the closing span tag\nhtmlContent = htmlContent.replace(/\\]/g, '</span>');\n\n// Update the element's innerHTML with the modified content\ncontainerDiv.innerHTML = htmlContent;\n</script>",
           "afmt": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}",
+          "bqfmt": "{{Front}}",
+          "bafmt": ""
+        }
+      ]
+    },
+    {
+      "name": "MultiChoice",
+      "type": 0,
+      "css": ".card {\n  font-family: arial;\n  font-size: 21px;\n  text-align: center;\n  color: black;\n  background-color: white;\n}\n\n/* Container layout */\n.front-text {\n  text-align: left;\n  display: inline-block;\n  width: 100%;\n  max-width: 600px;\n}\n\n/* Box wrapper for header & image side-by-side */\n.header-container {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  border-radius: 12px;\n  padding: 16px 20px;\n  margin-bottom: 20px;\n  background: transparent; /* No fill */\n  border: none;              /* No border/stroke */\n  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); /* Soft shadow */\n}\n\n/* Header line on the left */\n.front-header {\n  font-size: 32px;\n  font-weight: bold;\n  text-align: left;\n  flex: 1;\n}\n\n/* Container for image on the right */\n.header-image {\n  flex-shrink: 0;\n  margin-left: 15px;\n}\n\n.header-image img {\n  max-height: 120px;\n  width: auto;\n  margin: 0;\n  display: block;\n  border-radius: 6px;\n}\n\n/* Row wrapper for each choice */\n.choice-row {\n  display: flex;\n  align-items: flex-start;\n  margin-bottom: 8px;\n}\n\n.choice-prefix {\n  font-weight: bold;\n  min-width: 48px;\n  margin-right: 8px;\n  flex-shrink: 0;\n}\n\n.choice-text {\n  flex-grow: 1;\n}",
+      "latex_pre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+      "latex_post": "\\end{document}",
+      "latex_svg": false,
+      "sort_field_index": 1,
+      "fields": [
+        {
+          "name": "Front",
+          "ord": 0,
+          "font": "Arial",
+          "size": 20,
+          "sticky": true,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        },
+        {
+          "name": "Back",
+          "ord": 1,
+          "font": "Arial",
+          "size": 20,
+          "sticky": true,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        }
+      ],
+      "templates": [
+        {
+          "name": "Card 1",
+          "ord": 0,
+          "qfmt": "<div class=\"front-text\">\n  {{Front}}\n</div>\n\n<br>\n\n[[typebox:Back]]\n\n<script>\n// --- CHOICE SCRAMBLER ---\nfunction scrambleChoices() {\n  const container = document.querySelector(\".front-text\");\n  if (!container) return;\n\n  // 1. Preserve any <img> elements in the field before overwriting HTML\n  const images = Array.from(container.querySelectorAll(\"img\"));\n  const imagesHTML = images.map(img => img.outerHTML).join(\"\");\n\n  // Extract raw text lines\n  let lines = container.innerText\n    .split(\"\\n\")\n    .map(line => line.trim())\n    .filter(line => line.length > 0);\n\n  // Need at least 1 header + 2 choices to shuffle\n  if (lines.length <= 2) return;\n\n  const header = lines[0];\n  let choices = lines.slice(1);\n\n  // Fisher-Yates Shuffle algorithm\n  for (let i = choices.length - 1; i > 0; i--) {\n    const j = Math.floor(Math.random() * (i + 1));\n    [choices[i], choices[j]] = [choices[j], choices[i]];\n  }\n\n  // Split each line into a prefix and content wrapper\n  const formattedChoices = choices.map(choiceText => {\n    const match = choiceText.match(/^([a-z0-9]+[:\\.]?)\\s*(.*)$/i);\n    if (match) {\n      const prefix = match[1];\n      const text = match[2];\n      return `<div class=\"choice-row\"><span class=\"choice-prefix\">${prefix}</span><span class=\"choice-text\">${text}</span></div>`;\n    }\n    return `<div class=\"choice-row\"><span class=\"choice-text\">${choiceText}</span></div>`;\n  });\n\n  // Render container with header on left and image on right inside a shadowed box\n  const headerSection = `<div class=\"header-container\"><div class=\"front-header\">${header}</div>${imagesHTML ? `<div class=\"header-image\">${imagesHTML}</div>` : ''}</div>`;\n\n  container.innerHTML = headerSection + formattedChoices.join(\"\");\n}\n\n// Run scrambler immediately\nscrambleChoices();\n\n\n// --- TYPEBOX ENTER-KEY BINDING ---\nfunction waitForInputAndBindEnter(retries = 10) {\n  const input = document.querySelector(\"input[type='text']\");\n  const ta = document.querySelector(\"textarea\");\n\n  const el = input || ta;\n  if (el) {\n    el.addEventListener(\"keydown\", function (e) {\n      if (e.key === \"Enter\") {\n        e.preventDefault();\n        pycmd(\"ans\"); // simulate \"Show Answer\"\n      }\n    });\n\n    el.setAttribute(\"autocomplete\", \"off\");\n    el.setAttribute(\"spellcheck\", \"false\");\n    el.style.boxSizing = \"border-box\";\n    el.style.width = \"100%\";\n    if (ta) {\n      el.rows = 1;\n      el.style.resize = \"none\";\n    }\n  } else if (retries > 0) {\n    setTimeout(() => waitForInputAndBindEnter(retries - 1), 100);\n  }\n}\n\nsetTimeout(waitForInputAndBindEnter, 50);\n</script>",
+          "afmt": "",
           "bqfmt": "{{Front}}",
           "bafmt": ""
         }
@@ -817,75 +862,6 @@
           "qfmt": "{{Front}}\n\n<div id=\"img-container\">\n  {{Images}}\n</div>\n\n<script>\n(function() {\n  const container = document.getElementById(\"img-container\");\n  const imgs = container.getElementsByTagName(\"img\");\n\n  if (imgs.length > 0) {\n    // ALWAYS generate new random on front load\n    const index = Math.floor(Math.random() * imgs.length);\n    sessionStorage.setItem(\"randomImageIndex\", index);\n\n    for (let i = 0; i < imgs.length; i++) {\n      imgs[i].style.display = \"none\";\n    }\n\n    imgs[index].style.display = \"block\";\n  }\n})();\n</script>",
           "afmt": "{{Front}}\n\n<div id=\"img-container\">\n  {{Images}}\n</div>\n\n<script>\n(function() {\n  const container = document.getElementById(\"img-container\");\n  const imgs = container.getElementsByTagName(\"img\");\n\n  let index = sessionStorage.getItem(\"randomImageIndex\");\n\n  if (imgs.length > 0 && index !== null) {\n    for (let i = 0; i < imgs.length; i++) {\n      imgs[i].style.display = \"none\";\n    }\n\n    imgs[index].style.display = \"block\";\n  }\n\n  // reset after showing back so next card is new\n  sessionStorage.removeItem(\"randomImageIndex\");\n})();\n</script>\n\n<hr id=answer>\n\n{{Back}}",
           "bqfmt": "",
-          "bafmt": ""
-        }
-      ]
-    },
-    {
-      "name": "TEMPORARY",
-      "type": 0,
-      "css": ".card {\n    font-family: arial;\n    font-size: 20px;\n    text-align:center;\n    color: black;\n    background-color: white;\n}\n\n.back-side {\n\tfont-size: 22px;\n}\n\n.question {\n\tposition: absolute;\n  left: 50%;\n  top: 10px;\n  transform: translateX(-50%);\n  z-index: 9999;\n\n  background: rgba(255, 255, 255, 0.8);\n  color: black;\n\n  padding: 5px 9px;\n  border-radius: 8px;\n\n  backdrop-filter: blur(2px);\n\n\tbox-shadow: 5px 4px 12px rgba(0, 0, 0, 0.08);\n}\n\n.card-wrap {\n  position: relative;\n  width: 320px;\n  height: 330px;\n  margin: 0 auto;\n}\n\n.atom {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  transform: translate(-50%, -50%);\n  width: 1px;\n  height: 1px;\n}\n\n.nucleus {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  transform: translate(-50%, -50%);\n  border-radius: 50%;\n  z-index: 4;\n  overflow: visible;\n  background: #222;\n}\n\n.nucleus-label {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  transform: translate(-50%, -50%);\n  z-index: 6;\n  font-size: 22px;\n  font-weight: 700;\n  color: white;\n  text-shadow: 0 1px 2px rgba(0,0,0,0.45);\n  pointer-events: none;\n}\n\n.shell {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  border: 1px solid rgba(0, 0, 0, 0.30);\n  border-radius: 50%;\n  transform: translate(-50%, -50%);\n  animation-name: spin;\n  animation-timing-function: linear;\n  animation-iteration-count: infinite;\n  z-index: 2;\n  pointer-events: none;\n}\n\n.shell.reverse {\n  animation-direction: reverse;\n}\n\n.electron {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 11px;\n  height: 11px;\n  margin-left: -5.5px;\n  margin-top: -5.5px;\n  border-radius: 50%;\n  background: #2f9bff;\n  \n}\n\n@keyframes spin {\n  from { transform: translate(-50%, -50%) rotate(0deg); }\n  to   { transform: translate(-50%, -50%) rotate(360deg); }\n}",
-      "latex_pre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
-      "latex_post": "\\end{document}",
-      "latex_svg": false,
-      "sort_field_index": 1,
-      "fields": [
-        {
-          "name": "Front",
-          "ord": 0,
-          "font": "Arial",
-          "size": 20,
-          "sticky": false,
-          "rtl": false,
-          "description": "",
-          "plainText": false,
-          "collapsed": false,
-          "excludeFromSearch": false
-        },
-        {
-          "name": "Symbol",
-          "ord": 1,
-          "font": "Arial",
-          "size": 20,
-          "sticky": false,
-          "rtl": false,
-          "description": "",
-          "plainText": false,
-          "collapsed": false,
-          "excludeFromSearch": false
-        },
-        {
-          "name": "Electrons",
-          "ord": 2,
-          "font": "Arial",
-          "size": 20,
-          "sticky": false,
-          "rtl": false,
-          "description": "",
-          "plainText": false,
-          "collapsed": false,
-          "excludeFromSearch": false
-        },
-        {
-          "name": "Back",
-          "ord": 3,
-          "font": "Arial",
-          "size": 20,
-          "sticky": false,
-          "rtl": false,
-          "description": "",
-          "plainText": false,
-          "collapsed": false,
-          "excludeFromSearch": false
-        }
-      ],
-      "templates": [
-        {
-          "name": "Card 1",
-          "ord": 0,
-          "qfmt": "<h3 class=\"question\">{{Front}}</h3>\n<div class=\"card-wrap\">\n  <div id=\"atom\" class=\"atom\"></div>\n</div>\n\n<script>\n(() => {\n  const root = document.getElementById(\"atom\");\n  if (!root) return;\n\n  const symbol = \"{{Symbol}}\".trim() || \"?\";\n  const electrons = parseInt(\"{{Electrons}}\", 10) || 0;\n\n  const shellCaps = [2, 8, 18, 32, 50, 72, 98];\n\n  function el(tag, cls) {\n    const node = document.createElement(tag);\n    if (cls) node.className = cls;\n    return node;\n  }\n\n  function buildNucleus(size) {\n    const nucleus = el(\"div\", \"nucleus\");\n    nucleus.style.width = nucleus.style.height = size + \"px\";\n\n    const label = el(\"div\", \"nucleus-label\");\n    label.textContent = symbol;\n    nucleus.appendChild(label);\n\n    return nucleus;\n  }\n\n  function buildShell(index, count) {\n    const shell = el(\"div\", \"shell\");\n    const diameter = 100 + index * 50;\n    const radius = diameter / 2;\n    const duration = 3.5 + index * index * 3.2;\n\n    shell.style.width = shell.style.height = diameter + \"px\";\n    shell.style.animationDuration = duration + \"s\";\n    if (index % 2 === 1) shell.classList.add(\"reverse\");\n\n    for (let i = 0; i < count; i++) {\n      const e = el(\"span\", \"electron\");\n      const angle = (i / count) * 360;\n      e.style.transform = `rotate(${angle}deg) translateY(-${radius}px)`;\n      shell.appendChild(e);\n    }\n\n    return shell;\n  }\n\n  const shells = [];\n  let remaining = electrons;\n  for (let i = 0; i < shellCaps.length && remaining > 0; i++) {\n    const count = Math.min(shellCaps[i], remaining);\n    shells.push(count);\n    remaining -= count;\n  }\n  if (remaining > 0) shells.push(remaining);\n\n  const nucleusSize = 60;\n\n  root.appendChild(buildNucleus(nucleusSize));\n  shells.forEach((count, index) => root.appendChild(buildShell(index, count)));\n})();\n</script>",
-          "afmt": "\n{{FrontSide}}\n\n<hr id=answer>\n<div class=\"back-side\">\n{{Back}}\n</div>",
-          "bqfmt": "{{Symbol}}",
           "bafmt": ""
         }
       ]
@@ -1022,7 +998,7 @@
     {
       "name": "英語止まらない",
       "type": 0,
-      "css": ".card {\n    font-family: arial;\n    font-size: 21px;\n    line-height: 1.5;\n    text-align: center;\n    color: black;\n    /* background-color: white; */\n\t\tbackground-color: #e7f0fd;\n\t\tpadding:10px;\n\t\t\t\tthe screen size */\n}\n\n/* 2. The Inner Card (White Frame) */\n.box {\n    background-color: white;   /* The inner white canvas */\n    border-radius: 16px;       /* Beautifully rounded corners */\n    padding: 30px 20px;        /* Generous breathing room inside the white card */\n    \n    /* Layout tweaks to make it behave like a true card frame */\n    width: auto;         \n\t\theight: 61vh;   \n\t\tmax-width: 1000px;   \n    margin: 0 auto;            /* Centers the white frame horizontally */\n    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Adds a soft drop shadow for a clean look */\n    \n    /* Layer setting for the image sandwich */\n    position: relative;        \n\t\toverflow: hidden;\n\t\tz-index: 2; \n}\n\n.front {\n    font-size: 23px;\n}\n\n.japanese {\n    text-align: center;\n}\n\n.back audio,\n.back .replay-button,\n.back a.replay-button {\n    display: block;\n    margin-top: 8px;\n}\n\nimg {\n    /* Position fixed to the left with spacing */\n    position: absolute;\n    left: 5px;          /* Spacing from the left edge */\n    top: 10px;        /* Spacing from the bottom edge (change to 'top: 20px' if you want it at the top) */\n    \n    /* Transparency */\n    opacity: 0.1;        /* 0.5 = 50% transparent. Lower numbers make it more see-through */\n    \n    /* Size limits (Adjust these so it doesn't get in the way of your text) */\n    max-width: 500px;   \n    max-height: 500px;\n    height: auto;       \n    width: auto;\n    \n    /* Safety setting */\n    z-index: 1;         /* Puts the image BEHIND your text so you can still read easily */\n}\n\n.shape {\n\tposition: fixed;\n\tbottom: -0px;\n\tright: 0px;\n\twidth: 200px;\n\theight: 200px;\n\tz-index: 1; \n\topacity: 0.2;\n}\n\n.shape {\n    /* Keeps the spinning axis centered */\n    transform-origin: center; \n    display: inline-block;\n    vertical-align: middle;\n}",
+      "css": ".card {\n    font-family: arial;\n    font-size: 21px;\n    line-height: 1.5;\n    text-align: center;\n    color: black;\n    /* background-color: white; */\n\t\tbackground-color: #e7f0fd;\n\t\tpadding:10px;\n\t\t\t\tthe screen size */\n}\n\n/* 2. The Inner Card (White Frame) */\n.box {\n    background-color: white;   /* The inner white canvas */\n    border-radius: 16px;       /* Beautifully rounded corners */\n    padding: 30px 20px;        /* Generous breathing room inside the white card */\n    \n    /* Layout tweaks to make it behave like a true card frame */\n    width: auto;         \n\t\theight: 61vh;   \n\t\tmax-width: 1000px;   \n    margin: 0 auto;            /* Centers the white frame horizontally */\n    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Adds a soft drop shadow for a clean look */\n    \n    /* Layer setting for the image sandwich */\n    position: relative;        \n\t\toverflow: hidden;\n\t\tz-index: 2; \n}\n\n.front {\n    font-size: 23px;\n}\n\n.japanese {\n    text-align: center;\n}\n\n.back audio,\n.back .replay-button,\n.back a.replay-button {\n    display: block;\n    margin-top: 8px;\n}\n\nimg {\n    /* Position fixed to the left with spacing */\n    position: absolute;\n    left: 5px;          /* Spacing from the left edge */\n    top: 10px;        /* Spacing from the bottom edge (change to 'top: 20px' if you want it at the top) */\n    \n    /* Transparency */\n    opacity: 0.1;        /* 0.5 = 50% transparent. Lower numbers make it more see-through */\n    \n    /* Size limits (Adjust these so it doesn't get in the way of your text) */\n    max-width: 500px;   \n    max-height: 500px;\n    height: auto;       \n    width: auto;\n    \n    /* Safety setting */\n    z-index: 1;         /* Puts the image BEHIND your text so you can still read easily */\n}\n\n.shape {\n\tposition: fixed;\n\tbottom: -0px;\n\tright: 0px;\n\twidth: 200px;\n\theight: 200px;\n\tz-index: 1; \n\topacity: 0.2;\n}\n\n.shape {\n    /* Keeps the spinning axis centered */\n    transform-origin: center; \n    display: inline-block;\n    vertical-align: middle;\n}\n\n/* When the screen width is 768px or smaller */\n@media (max-width: 750px) {\n    img {\n        /* Change these values to reposition the image on smaller screens */\n        left: -30px;       /* New left position */\n        top: 90px;        /* New top position */\n        \n        /* Optional: You might also want to shrink the image \n           so it doesn't overwhelm smaller screens */\n        max-width: 400px; \n        max-height: 400px;\n    }\n}",
       "latex_pre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
       "latex_post": "\\end{document}",
       "latex_svg": false,
@@ -1078,7 +1054,7 @@
     }
   ],
   "metadata": {
-    "exported_at": "2026-07-14T12:38:27.643974Z",
+    "exported_at": "2026-08-27T09:13:08.792632Z",
     "anki_version": "25.09.4",
     "addon_version": "1.0.0",
     "count": 15
