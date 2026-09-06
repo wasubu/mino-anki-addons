@@ -83,7 +83,7 @@
         {
           "name": "Name -> Capital",
           "ord": 1,
-          "qfmt": "{{#Capital}}\n  <div class=\"value value--top\">{{Name}}</div>\n\n  <hr>\n\n  <div class=\"type\">🇺🇸 US State Capital 🇺🇸</div>\n  <div class=\"value\">?</div>\n{{/Capital}}",
+          "qfmt": "{{#Capital}}\n  <div class=\"value value--top\">{{Name}}{{Name - Audio}}</div>\n\n  <hr>\n\n  <div class=\"type\">🇺🇸 US State Capital 🇺🇸</div>\n  <div class=\"value\">?</div>\n{{/Capital}}",
           "afmt": "{{#Capital}}\n  <div class=\"value value--top\">{{Name}}</div>\n\n  <hr>\n\n  <div class=\"type\">🇺🇸 US State Capital 🇺🇸</div>\n  <div class=\"value\">{{Capital}}{{Capital - Audio}}</div>\n{{/Capital}}",
           "bqfmt": "",
           "bafmt": ""
@@ -93,6 +93,51 @@
           "ord": 2,
           "qfmt": "{{#Capital}}\n  <div class=\"value value--top\">?</div>\n\n  <hr>\n\n  <div class=\"type\">🇺🇸 US State Capital 🇺🇸</div>\n  <div class=\"value\">{{Capital}}</div>\n{{/Capital}}",
           "afmt": "{{#Capital}}\n  <div class=\"value value--top\">{{Name}}{{Name - Audio}}</div>\n\n  <hr>\n\n  <div class=\"type\">🇺🇸 US State Capital 🇺🇸</div>\n  <div class=\"value\">{{Capital}}</div>\n{{/Capital}}",
+          "bqfmt": "",
+          "bafmt": ""
+        }
+      ]
+    },
+    {
+      "name": "_Basic mino",
+      "type": 0,
+      "css": ".card {\n    font-family: arial;\n    font-size: 20px;\n    line-height: 1.5;\n    text-align: center;\n    color: black;\n    background-color: white;\n}\n",
+      "latex_pre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+      "latex_post": "\\end{document}",
+      "latex_svg": false,
+      "sort_field_index": 0,
+      "fields": [
+        {
+          "name": "Front",
+          "ord": 0,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        },
+        {
+          "name": "Back",
+          "ord": 1,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        }
+      ],
+      "templates": [
+        {
+          "name": "Card 1",
+          "ord": 0,
+          "qfmt": "{{Front}}",
+          "afmt": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}",
           "bqfmt": "",
           "bafmt": ""
         }
@@ -767,7 +812,7 @@
     {
       "name": "MultiChoice",
       "type": 0,
-      "css": ".card {\n  font-family: arial;\n  font-size: 21px;\n  text-align: center;\n  color: black;\n  background-color: white;\n}\n\n/* Container layout */\n.front-text {\n  text-align: left;\n  display: inline-block;\n  width: 100%;\n  max-width: 600px;\n}\n\n/* Box wrapper for header & image side-by-side */\n.header-container {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  border-radius: 12px;\n  padding: 16px 20px;\n  margin-bottom: 20px;\n  background: transparent; /* No fill */\n  border: none;              /* No border/stroke */\n  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); /* Soft shadow */\n}\n\n/* Header line on the left */\n.front-header {\n  font-size: 32px;\n  font-weight: bold;\n  text-align: left;\n  flex: 1;\n}\n\n/* Container for image on the right */\n.header-image {\n  flex-shrink: 0;\n  margin-left: 15px;\n}\n\n.header-image img {\n  max-height: 120px;\n  width: auto;\n  margin: 0;\n  display: block;\n  border-radius: 6px;\n}\n\n/* Row wrapper for each choice */\n.choice-row {\n  display: flex;\n  align-items: flex-start;\n  margin-bottom: 8px;\n}\n\n.choice-prefix {\n  font-weight: bold;\n  min-width: 48px;\n  margin-right: 8px;\n  flex-shrink: 0;\n}\n\n.choice-text {\n  flex-grow: 1;\n}",
+      "css": ".card {\n  font-family: arial, sans-serif;\n  font-size: 21px;\n  text-align: center;\n  color: #1a1a1a;\n  background-color: #ffffff;\n}\n\n/* Container layout - locked dimensions for Front & Back */\n.front-text {\n  text-align: left;\n  display: inline-block;\n  width: 100%;\n  max-width: 600px;\n  font-size: 21px;\n  line-height: 1.4;\n  box-sizing: border-box;\n}\n\n/* Header & image box */\n.header-container {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  border-radius: 12px;\n  padding: 16px 20px;\n  margin-bottom: 20px;\n  background: transparent;\n  border: none;\n  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);\n  box-sizing: border-box;\n}\n\n.front-header {\n  font-size: 32px !important;\n  font-weight: bold;\n  line-height: 1.2;\n  text-align: left;\n  flex: 1;\n}\n\n.header-image {\n  flex-shrink: 0;\n  margin-left: 15px;\n}\n\n.header-image img {\n  max-height: 120px;\n  width: auto;\n  margin: 0;\n  display: block;\n  border-radius: 6px;\n}\n\n.choices-wrapper {\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  width: 100%;\n  box-sizing: border-box;\n}\n\n/* Choice Buttons - Strictly identical sizing on Front & Back */\n.choice-btn {\n  display: flex;\n  align-items: flex-start;\n  width: 100%;\n  padding: 14px 18px;\n  margin: 0;\n  background-color: #ffffff;\n  color: #1a1a1a;\n  border: 2px solid #e0e0e0;\n  border-radius: 10px;\n  font-size: 21px !important;\n  font-family: arial, sans-serif;\n  line-height: 1.4;\n  text-align: left;\n  cursor: pointer;\n  box-sizing: border-box !important;\n  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);\n  outline: none;\n  -webkit-tap-highlight-color: transparent;\n  user-select: none;\n  transition: background-color 0.15s ease, border-color 0.15s ease;\n}\n\n.choice-btn:hover {\n  background-color: #f5f5f5;\n  border-color: #cccccc;\n}\n\n.choice-btn.selected {\n  border-color: #2196f3;\n  background-color: #e3f2fd;\n  text-shadow: 0 0 0.6px #1a1a1a;\n  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);\n}\n\n.choice-btn.correct {\n  background-color: #4caf50 !important;\n  color: #ffffff !important;\n  border-color: #388e3c !important;\n  text-shadow: 0 0 0.6px #ffffff;\n}\n\n.choice-btn.wrong {\n  background-color: #f44336 !important;\n  color: #ffffff !important;\n  border-color: #d32f2f !important;\n  text-shadow: 0 0 0.6px #ffffff;\n}\n\n.choice-prefix {\n  font-size: 21px !important;\n  font-weight: bold;\n  line-height: 1.4;\n  min-width: 48px;\n  margin-right: 8px;\n  flex-shrink: 0;\n}\n\n.choice-text {\n  font-size: 21px !important;\n  line-height: 1.4;\n  flex-grow: 1;\n}",
       "latex_pre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
       "latex_post": "\\end{document}",
       "latex_svg": false,
@@ -802,8 +847,8 @@
         {
           "name": "Card 1",
           "ord": 0,
-          "qfmt": "<div class=\"front-text\">\n  {{Front}}\n</div>\n\n<br>\n\n[[typebox:Back]]\n\n<script>\n// --- CHOICE SCRAMBLER ---\nfunction scrambleChoices() {\n  const container = document.querySelector(\".front-text\");\n  if (!container) return;\n\n  // 1. Preserve any <img> elements in the field before overwriting HTML\n  const images = Array.from(container.querySelectorAll(\"img\"));\n  const imagesHTML = images.map(img => img.outerHTML).join(\"\");\n\n  // Extract raw text lines\n  let lines = container.innerText\n    .split(\"\\n\")\n    .map(line => line.trim())\n    .filter(line => line.length > 0);\n\n  // Need at least 1 header + 2 choices to shuffle\n  if (lines.length <= 2) return;\n\n  const header = lines[0];\n  let choices = lines.slice(1);\n\n  // Fisher-Yates Shuffle algorithm\n  for (let i = choices.length - 1; i > 0; i--) {\n    const j = Math.floor(Math.random() * (i + 1));\n    [choices[i], choices[j]] = [choices[j], choices[i]];\n  }\n\n  // Split each line into a prefix and content wrapper\n  const formattedChoices = choices.map(choiceText => {\n    const match = choiceText.match(/^([a-z0-9]+[:\\.]?)\\s*(.*)$/i);\n    if (match) {\n      const prefix = match[1];\n      const text = match[2];\n      return `<div class=\"choice-row\"><span class=\"choice-prefix\">${prefix}</span><span class=\"choice-text\">${text}</span></div>`;\n    }\n    return `<div class=\"choice-row\"><span class=\"choice-text\">${choiceText}</span></div>`;\n  });\n\n  // Render container with header on left and image on right inside a shadowed box\n  const headerSection = `<div class=\"header-container\"><div class=\"front-header\">${header}</div>${imagesHTML ? `<div class=\"header-image\">${imagesHTML}</div>` : ''}</div>`;\n\n  container.innerHTML = headerSection + formattedChoices.join(\"\");\n}\n\n// Run scrambler immediately\nscrambleChoices();\n\n\n// --- TYPEBOX ENTER-KEY BINDING ---\nfunction waitForInputAndBindEnter(retries = 10) {\n  const input = document.querySelector(\"input[type='text']\");\n  const ta = document.querySelector(\"textarea\");\n\n  const el = input || ta;\n  if (el) {\n    el.addEventListener(\"keydown\", function (e) {\n      if (e.key === \"Enter\") {\n        e.preventDefault();\n        pycmd(\"ans\"); // simulate \"Show Answer\"\n      }\n    });\n\n    el.setAttribute(\"autocomplete\", \"off\");\n    el.setAttribute(\"spellcheck\", \"false\");\n    el.style.boxSizing = \"border-box\";\n    el.style.width = \"100%\";\n    if (ta) {\n      el.rows = 1;\n      el.style.resize = \"none\";\n    }\n  } else if (retries > 0) {\n    setTimeout(() => waitForInputAndBindEnter(retries - 1), 100);\n  }\n}\n\nsetTimeout(waitForInputAndBindEnter, 50);\n</script>",
-          "afmt": "",
+          "qfmt": "<div class=\"front-text\">\n  {{Front}}\n</div>\n\n<script>\n(function initFront() {\n  sessionStorage.removeItem(\"anki_selected\");\n  sessionStorage.removeItem(\"anki_choices\");\n\n  const container = document.querySelector(\".front-text\");\n  if (!container) return;\n\n  const images = Array.from(container.querySelectorAll(\"img\"));\n  const imagesHTML = images.map(img => img.outerHTML).join(\"\");\n\n  let textContent = container.innerHTML\n    .replace(/<br\\s*\\/?>/gi, \"\\n\")\n    .replace(/<\\/div>/gi, \"\\n\")\n    .replace(/<\\/p>/gi, \"\\n\");\n  \n  let tempDiv = document.createElement(\"div\");\n  tempDiv.innerHTML = textContent;\n  let cleanText = tempDiv.innerText || tempDiv.textContent || \"\";\n\n  let lines = cleanText.split(\"\\n\").map(l => l.trim()).filter(l => l.length > 0);\n  if (lines.length <= 1) return;\n\n  const header = lines[0];\n\n  // Safely strips leading whitespace and optional prefixes (e.g. aslfj:, 238324:, :, 1., a))\n  let choices = lines.slice(1).map((text, idx) => {\n    let cleanChoiceText = text.replace(/^\\s*([a-zA-Z0-9_-]*[:\\.\\)])?\\s*/, \"\").trim();\n    return {\n      text: cleanChoiceText || text.trim(),\n      originalIndex: idx + 1\n    };\n  });\n\n  // Fisher-Yates Shuffle\n  for (let i = choices.length - 1; i > 0; i--) {\n    const j = Math.floor(Math.random() * (i + 1));\n    [choices[i], choices[j]] = [choices[j], choices[i]];\n  }\n\n  sessionStorage.setItem(\"anki_choices\", JSON.stringify(choices));\n  sessionStorage.setItem(\"anki_header\", header);\n\n  const formattedChoices = choices.map(item => {\n    return `<div class=\"choice-btn\" data-index=\"${item.originalIndex}\" onclick=\"selectChoice(this, ${item.originalIndex})\" ondblclick=\"confirmChoice(this, ${item.originalIndex})\"><span class=\"choice-text\">${item.text}</span></div>`;\n  });\n\n  const headerSection = `<div class=\"header-container\"><div class=\"front-header\">${header}</div>${imagesHTML ? `<div class=\"header-image\">${imagesHTML}</div>` : ''}</div>`;\n  container.innerHTML = headerSection + `<div class=\"choices-wrapper\">` + formattedChoices.join(\"\") + `</div>`;\n})();\n\nfunction selectChoice(btn, index) {\n  sessionStorage.setItem(\"anki_selected\", index);\n  document.querySelectorAll(\".choice-btn\").forEach(b => b.classList.remove(\"selected\"));\n  btn.classList.add(\"selected\");\n}\n\nfunction confirmChoice(btn, index) {\n  selectChoice(btn, index);\n  if (typeof pycmd !== \"undefined\") {\n    pycmd(\"ans\");\n  } else if (typeof AnkiDroidJS !== \"undefined\") {\n    AnkiDroidJS.showAnswer();\n  }\n}\n</script>",
+          "afmt": "<div class=\"front-text\" id=\"back-container\">\n  {{Front}}\n</div>\n\n<!-- Hidden Answer Reference -->\n<div id=\"correct-answer-index\" style=\"display: none;\">{{Back}}</div>\n\n<script>\n(function initBackAndGrade() {\n  const targetElement = document.getElementById(\"correct-answer-index\");\n  const rawText = targetElement ? targetElement.innerText.trim() : \"\";\n  const match = rawText.match(/\\d+/);\n  const correctIndex = match ? parseInt(match[0], 10) : null;\n\n  const savedSelected = sessionStorage.getItem(\"anki_selected\");\n  const selectedIndex = savedSelected !== null ? parseInt(savedSelected, 10) : null;\n\n  const savedChoicesStr = sessionStorage.getItem(\"anki_choices\");\n  const container = document.getElementById(\"back-container\");\n\n  if (savedChoicesStr && container) {\n    const choices = JSON.parse(savedChoicesStr);\n    const header = sessionStorage.getItem(\"anki_header\") || \"\";\n\n    const formattedChoices = choices.map(item => {\n      let statusClass = \"\";\n      if (item.originalIndex === correctIndex) {\n        statusClass = \"correct\";\n      } else if (item.originalIndex === selectedIndex) {\n        statusClass = \"wrong\";\n      }\n\n      // Output matches Front Template structure to prevent layout shifts\n      return `<div class=\"choice-btn ${statusClass}\"><span class=\"choice-text\">${item.text}</span></div>`;\n    });\n\n    const images = Array.from(container.querySelectorAll(\"img\"));\n    const imagesHTML = images.map(img => img.outerHTML).join(\"\");\n    const headerSection = `<div class=\"header-container\"><div class=\"front-header\">${header}</div>${imagesHTML ? `<div class=\"header-image\">${imagesHTML}</div>` : ''}</div>`;\n\n    container.innerHTML = headerSection + `<div class=\"choices-wrapper\">` + formattedChoices.join(\"\") + `</div>`;\n  }\n\n  // Auto-grade timing (100ms if correct, 3000ms if wrong)\n  const isCorrect = (selectedIndex === correctIndex);\n  const ease = isCorrect ? 3 : 1;\n  const autoGradeDelay = isCorrect ? 50 : 3000;\n\n  setTimeout(() => {\n    if (typeof pycmd !== \"undefined\") {\n      pycmd(\"ease\" + ease);\n    } else if (typeof AnkiDroidJS !== \"undefined\") {\n      AnkiDroidJS.answerCard(ease);\n    }\n  }, autoGradeDelay);\n})();\n</script>",
           "bqfmt": "{{Front}}",
           "bafmt": ""
         }
@@ -867,6 +912,132 @@
       ]
     },
     {
+      "name": "Shuffle v0",
+      "type": 0,
+      "css": ".shuffle-container, .shuffle-container * {\n  box-sizing: border-box !important;\n  margin: 0;\n  padding: 0;\n}\n\n.card {\n  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif;\n  font-size: 18px;\n  text-align: center;\n  color: #2c3e50;\n  background-color: #f8f9fa;\n  padding: 15px;\n}\n\n.shuffle-container {\n  max-width: 600px;\n  margin: 0 auto;\n}\n\n.translation-hint {\n  font-size: 1.25em;\n  font-weight: 600;\n  margin-bottom: 15px;\n  color: #34495e;\n}\n\n.status-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  margin: 12px 4px 6px 4px;\n}\n\n.box-label {\n  font-size: 0.8em;\n  text-align: left;\n  color: #7f8c8d;\n  text-transform: uppercase;\n  letter-spacing: 0.5px;\n}\n\n.feedback-badge {\n  font-size: 0.85em;\n  font-weight: bold;\n}\n\n.correct-badge { color: #2ecc71; }\n.incorrect-badge { color: #e74c3c; }\n\n.word-box {\n  min-height: 75px;\n  background: #ffffff;\n  border: 2px dashed #bdc3c7;\n  border-radius: 12px;\n  padding: 10px;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 10px;\n  align-items: center;\n  justify-content: flex-start;\n  transition: background-color 0.15s ease, border-color 0.15s ease;\n}\n\n.source-box {\n  border: 2px solid #e0e0e0;\n  background: #f1f3f5;\n}\n\n.target-box.correct {\n  border-style: solid;\n  border-color: #2ecc71;\n  background-color: #e8f8f5;\n}\n\n.target-box.incorrect {\n  border-style: solid;\n  border-color: #e74c3c;\n  background-color: #fadbd8;\n}\n\n.placeholder {\n  color: #95a5a6;\n  font-size: 0.9em;\n  font-style: italic;\n  width: 100%;\n  text-align: center;\n  user-select: none;\n}\n\n/* Word Chips */\n.word-chip {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  background: #3498db;\n  color: #ffffff;\n  border: none !important;\n  outline: none !important;\n  border-radius: 10px;\n  padding: 8px 16px !important;\n  font-size: 17px !important;\n  font-weight: 500;\n  line-height: 1.2;\n  cursor: grab;\n  user-select: none;\n  -webkit-tap-highlight-color: transparent;\n  box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n  transition: background-color 0.15s ease, transform 0.1s ease;\n}\n\n.word-chip:hover {\n  background: #2980b9;\n}\n\n.word-chip:active {\n  cursor: grabbing;\n}\n\n.active-chip {\n  background: #2980b9;\n}\n\n.active-chip:hover {\n  background: #1f618d;\n}\n\n.word-chip.dragging {\n  opacity: 0.2;\n}\n\n/* Dynamic shifting placeholder spot */\n.chip-placeholder {\n  background: #e0e6ed;\n  border: 2px dashed #3498db;\n  border-radius: 10px;\n  height: 45px;\n  pointer-events: none;\n  animation: pulsePlaceholder 0.8s infinite alternate;\n}\n\n@keyframes pulsePlaceholder {\n  from { opacity: 0.6; }\n  to { opacity: 1; }\n}\n\n.controls {\n  margin-top: 15px;\n}\n\n.btn-reset {\n  background: #95a5a6;\n  color: white;\n  border: none;\n  outline: none !important;\n  border-radius: 6px;\n  padding: 6px 14px;\n  font-size: 0.85em;\n  cursor: pointer;\n  transition: background-color 0.15s ease;\n}\n\n.btn-reset:hover {\n  background: #7f8c8d;\n}\n\n/* Night Mode Support */\n.nightMode .card { background-color: #1e1e1e; color: #ecf0f1; }\n.nightMode .word-box { background: #2d2d2d; border-color: #444; }\n.nightMode .source-box { background: #252525; }\n.nightMode .chip-placeholder { background: #3a3a3a; border-color: #555; }\n.nightMode .translation-hint { color: #ecf0f1; }\n.nightMode .box-label { color: #95a5a6; }\n.nightMode .target-box.correct { background-color: #1b382b; border-color: #2ecc71; }\n.nightMode .target-box.incorrect { background-color: #3d1f1d; border-color: #e74c3c; }\n\n/* Responsive Video Support inside Translation */\n.translation-hint video {\n  max-width: 100%;\n  max-height: 260px;\n  width: auto;\n  height: auto;\n  border-radius: 10px;\n  margin: 0 auto 10px auto;\n  display: block;\n  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);\n}\n\n/* Fix for audio elements if embedded alongside */\n.translation-hint audio {\n  max-width: 100%;\n  margin-top: 8px;\n}",
+      "latex_pre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+      "latex_post": "\\end{document}",
+      "latex_svg": false,
+      "sort_field_index": 0,
+      "fields": [
+        {
+          "name": "Sentence",
+          "ord": 0,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        },
+        {
+          "name": "Translation",
+          "ord": 1,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        },
+        {
+          "name": "Video",
+          "ord": 2,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        },
+        {
+          "name": "don't use vid",
+          "ord": 3,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        }
+      ],
+      "templates": [
+        {
+          "name": "Card 1",
+          "ord": 0,
+          "qfmt": "<div class=\"shuffle-container\">\n  {{#Video}}\n  <div class=\"video-wrapper\" style=\"text-align:center; margin-bottom: 12px;\">\n    <video id=\"card-video\" src=\"{{Video}}\" autoplay playsinline style=\"max-width:100%; height:auto; border-radius: 8px;\"></video>\n  </div>\n  {{/Video}}\n\n  {{#Translation}}\n  <div class=\"translation-hint\">\n    {{Translation}}\n  </div>\n  {{/Translation}}\n\n  <div class=\"status-header\">\n    <span class=\"box-label\">Your sentence:</span>\n    <span id=\"feedback-badge\" class=\"feedback-badge\"></span>\n  </div>\n\n  <div id=\"target-box\" class=\"word-box target-box\">\n    <span class=\"placeholder\">Tap or drag words here...</span>\n  </div>\n\n  <div class=\"box-label\">Word bank:</div>\n  <div id=\"source-box\" class=\"word-box source-box\"></div>\n\n  <div id=\"hidden-sentence\" style=\"display:none;\">{{Sentence}}</div>\n\n  <div class=\"controls\">\n    <button type=\"button\" class=\"btn-replay\" onclick=\"replayVideo()\">▶ Play Video</button>\n    <button type=\"button\" class=\"btn-reset\" onclick=\"resetShuffle()\">↺ Reset</button>\n  </div>\n</div>\n\n<script>\n(function() {\n  // Replay video function\n  window.replayVideo = function() {\n    var vid = document.getElementById('card-video');\n    if (vid) {\n      vid.currentTime = 0;\n      vid.muted = false; // Unmutes audio on manual replay\n      vid.play();\n    }\n  };\n\n  var sentenceElem = document.getElementById('hidden-sentence');\n  if (!sentenceElem) return;\n\n  var originalText = sentenceElem.innerText.trim();\n  if (!originalText) return;\n\n  var originalWords = originalText.split(/\\s+/).filter(Boolean);\n  \n  var pool = originalWords.map(function(w, i) {\n    return { id: i, text: w };\n  });\n\n  function shuffle(array) {\n    var arr = array.slice();\n    for (var i = arr.length - 1; i > 0; i--) {\n      var j = Math.floor(Math.random() * (i + 1));\n      var temp = arr[i];\n      arr[i] = arr[j];\n      arr[j] = temp;\n    }\n    return arr;\n  }\n\n  var available = shuffle(pool);\n  var selected = [];\n  var draggedData = null;\n\n  var placeholder = document.createElement('div');\n  placeholder.className = 'chip-placeholder';\n\n  function removePlaceholder() {\n    if (placeholder.parentNode) {\n      placeholder.parentNode.removeChild(placeholder);\n    }\n  }\n\n  function getDragAfterElement(container, x, y) {\n    var chips = Array.from(container.querySelectorAll('.word-chip:not(.dragging)'));\n    \n    for (var i = 0; i < chips.length; i++) {\n      var box = chips[i].getBoundingClientRect();\n      var boxCenter = box.left + box.width / 2;\n      \n      if (y < box.bottom && (y < box.top || x < boxCenter)) {\n        return chips[i];\n      }\n    }\n    return null;\n  }\n\n  function render() {\n    removePlaceholder();\n    var targetBox = document.getElementById('target-box');\n    var sourceBox = document.getElementById('source-box');\n    var badge = document.getElementById('feedback-badge');\n    if (!targetBox || !sourceBox) return;\n\n    targetBox.innerHTML = '';\n    sourceBox.innerHTML = '';\n\n    if (selected.length === 0) {\n      targetBox.innerHTML = '<span class=\"placeholder\">Tap or drag words here...</span>';\n    } else {\n      selected.forEach(function(item, index) {\n        targetBox.appendChild(createChip(item, 'target', index));\n      });\n    }\n\n    available.forEach(function(item, index) {\n      sourceBox.appendChild(createChip(item, 'source', index));\n    });\n\n    if (available.length === 0 && selected.length > 0) {\n      var currentOrder = selected.map(function(i) { return i.text; }).join(' ');\n      if (currentOrder === originalWords.join(' ')) {\n        targetBox.classList.add('correct');\n        targetBox.classList.remove('incorrect');\n        if (badge) { badge.innerText = '✓ Correct'; badge.className = 'feedback-badge correct-badge'; }\n      } else {\n        targetBox.classList.add('incorrect');\n        targetBox.classList.remove('correct');\n        if (badge) { badge.innerText = '✕ Incorrect'; badge.className = 'feedback-badge incorrect-badge'; }\n      }\n    } else {\n      targetBox.classList.remove('correct', 'incorrect');\n      if (badge) { badge.innerText = ''; badge.className = 'feedback-badge'; }\n    }\n\n    setupBoxEvents(targetBox, sourceBox);\n  }\n\n  function createChip(item, location, index) {\n    var chip = document.createElement('button');\n    chip.type = 'button';\n    chip.className = 'word-chip' + (location === 'target' ? ' active-chip' : '');\n    chip.innerText = item.text;\n    chip.draggable = true;\n\n    chip.onclick = function() {\n      if (location === 'target') {\n        selected.splice(index, 1);\n        available.push(item);\n      } else {\n        available.splice(index, 1);\n        selected.push(item);\n      }\n      render();\n    };\n\n    chip.addEventListener('dragstart', function(e) {\n      draggedData = { item: item, location: location, index: index };\n      chip.classList.add('dragging');\n      placeholder.style.width = chip.offsetWidth + 'px';\n      e.dataTransfer.effectAllowed = 'move';\n    });\n\n    chip.addEventListener('dragend', function() {\n      chip.classList.remove('dragging');\n      removePlaceholder();\n      draggedData = null;\n    });\n\n    return chip;\n  }\n\n  function setupBoxEvents(targetBox, sourceBox) {\n    targetBox.ondragover = function(e) {\n      e.preventDefault();\n      if (!draggedData) return;\n\n      var placeholderSpan = targetBox.querySelector('.placeholder');\n      if (placeholderSpan) placeholderSpan.style.display = 'none';\n\n      var afterElement = getDragAfterElement(targetBox, e.clientX, e.clientY);\n      if (afterElement) {\n        targetBox.insertBefore(placeholder, afterElement);\n      } else {\n        targetBox.appendChild(placeholder);\n      }\n    };\n\n    targetBox.ondragleave = function(e) {\n      if (e.target === targetBox && !targetBox.contains(e.relatedTarget)) {\n        removePlaceholder();\n        var placeholderSpan = targetBox.querySelector('.placeholder');\n        if (placeholderSpan && selected.length === 0) {\n          placeholderSpan.style.display = 'block';\n        }\n      }\n    };\n\n    targetBox.ondrop = function(e) {\n      e.preventDefault();\n      if (!draggedData) return;\n\n      var children = Array.from(targetBox.querySelectorAll('.word-chip:not(.dragging), .chip-placeholder'));\n      var insertIndex = children.indexOf(placeholder);\n      if (insertIndex === -1) insertIndex = selected.length;\n\n      if (draggedData.location === 'source') {\n        available.splice(draggedData.index, 1);\n      } else {\n        selected.splice(draggedData.index, 1);\n        if (draggedData.index < insertIndex) insertIndex--;\n      }\n\n      selected.splice(insertIndex, 0, draggedData.item);\n      render();\n    };\n\n    sourceBox.ondragover = function(e) {\n      e.preventDefault();\n      removePlaceholder();\n    };\n\n    sourceBox.ondrop = function(e) {\n      e.preventDefault();\n      if (!draggedData) return;\n\n      if (draggedData.location === 'target') {\n        selected.splice(draggedData.index, 1);\n        available.push(draggedData.item);\n        render();\n      }\n    };\n  }\n\n  window.resetShuffle = function() {\n    available = shuffle(pool);\n    selected = [];\n    render();\n  };\n\n  render();\n})();\n</script>",
+          "afmt": "{{FrontSide}}\n\n<hr id=\"answer\">\n\n<div class=\"box-label\" style=\"text-align:center; margin-top:15px;\">Correct Answer:</div>\n<div style=\"font-size: 1.3em; font-weight: bold; color: #2ecc71; margin-top: 5px;\">\n  {{Sentence}}\n</div>",
+          "bqfmt": "{{Sentence}}",
+          "bafmt": ""
+        }
+      ]
+    },
+    {
+      "name": "TEMPORARY",
+      "type": 0,
+      "css": ".card {\n    font-family: arial;\n    font-size: 20px;\n    line-height: 1.5;\n    text-align: center;\n    color: black;\n    background-color: white;\n}\n",
+      "latex_pre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+      "latex_post": "\\end{document}",
+      "latex_svg": false,
+      "sort_field_index": 0,
+      "fields": [
+        {
+          "name": "Front",
+          "ord": 0,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        },
+        {
+          "name": "Back",
+          "ord": 1,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        },
+        {
+          "name": "CustomJS",
+          "ord": 2,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        }
+      ],
+      "templates": [
+        {
+          "name": "Card 1",
+          "ord": 0,
+          "qfmt": "<div class=\"front-text\">{{Front}}</div>\n\n<!-- Container where your script can render canvases, buttons, or HTML -->\n<div id=\"card-render-area\" style=\"margin-top: 15px; text-align: center;\"></div>\n\n<!-- Hidden element storing raw code from the field -->\n<div id=\"userCodeStorage\" style=\"display:none;\">{{text:CustomJS}}</div>\n\n<script>\n(function() {\n  const codeStorage = document.getElementById('userCodeStorage');\n  const container = document.getElementById('card-render-area');\n  if (!codeStorage || !container) return;\n\n  const code = codeStorage.textContent.trim();\n  if (code) {\n    try {\n      // Executes the field content and passes the 'container' div into it\n      const runCustomScript = new Function('container', code);\n      runCustomScript(container);\n    } catch (err) {\n      container.innerHTML = `<p style=\"color:red; font-size:12px;\">Script Error: ${err.message}</p>`;\n    }\n  }\n})();\n</script>",
+          "afmt": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}",
+          "bqfmt": "",
+          "bafmt": ""
+        }
+      ]
+    },
+    {
       "name": "TEMPORARY InNoteShowAns",
       "type": 0,
       "css": ".card {\n    font-family: arial;\n    font-size: 20px;\n    line-height: 1.5;\n    text-align: center;\n    color: black;\n    background-color: white;\n}\n",
@@ -912,6 +1083,63 @@
       ]
     },
     {
+      "name": "TEMPORARY LUA",
+      "type": 0,
+      "css": ".card {\n    font-family: arial;\n    font-size: 20px;\n    line-height: 1.5;\n    text-align: center;\n    color: black;\n    background-color: white;\n}\n",
+      "latex_pre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+      "latex_post": "\\end{document}",
+      "latex_svg": false,
+      "sort_field_index": 0,
+      "fields": [
+        {
+          "name": "Front",
+          "ord": 0,
+          "font": "Arial",
+          "size": 20,
+          "sticky": true,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        },
+        {
+          "name": "Back",
+          "ord": 1,
+          "font": "Arial",
+          "size": 20,
+          "sticky": true,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        },
+        {
+          "name": "test",
+          "ord": 2,
+          "font": "Arial",
+          "size": 20,
+          "sticky": true,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        }
+      ],
+      "templates": [
+        {
+          "name": "Card 1",
+          "ord": 0,
+          "qfmt": "<!-- front template -->\n{{Front}}\n\n<!-- Ace Code Editor Container -->\n<div style=\"margin-top: 15px; text-align: left;\">\n  <label style=\"font-weight: bold; font-size: 0.9rem;\">Write your Lua solution:</label>\n  <div id=\"lua-editor\" style=\"height: 200px; width: 100%; border-radius: 6px; border: 1px solid #444; margin-top: 5px; font-size: 14px;\"></div>\n</div>\n\n<!-- Run Button -->\n<button id=\"run-btn\" onclick=\"executeLuaAndGrade()\" style=\"margin-top: 12px; padding: 10px 20px; font-size: 1rem; border-radius: 6px; background-color: #2196F3; color: white; border: none; cursor: pointer; font-weight: bold;\">\n  Run & Test Code\n</button>\n\n<!-- Console Output Box -->\n<div id=\"console-wrapper\" style=\"display: none; margin-top: 15px; text-align: left;\">\n  <div style=\"font-size: 0.85rem; font-weight: bold; color: #555;\">Console / Test Output:</div>\n  <pre id=\"console-output\" style=\"background: #1e1e1e; color: #00ff00; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap; overflow-x: auto; margin-top: 5px;\"></pre>\n  <div id=\"test-result\" style=\"font-weight: bold; margin-top: 8px;\"></div>\n</div>\n\n<!-- Hidden Anki Fields -->\n<div id=\"expected-output\" style=\"display: none;\">{{Back}}</div>\n<div id=\"test-spec\" style=\"display: none;\">{{test}}</div>\n\n<!-- Offline Local Scripts -->\n<script src=\"_fengari-web.js\"></script>\n<script src=\"_ace.js\"></script>\n<script src=\"_ext-language_tools.js\"></script>\n<script src=\"_mode-lua.js\"></script>\n<script src=\"_theme-monokai.js\"></script>\n\n<script>\n  // Cleans Anki HTML markup & entities out of raw field text\n  function cleanAnkiField(html) {\n    const div = document.createElement(\"div\");\n    div.innerHTML = html.replace(/<br\\s*\\/?>/gi, \"\\n\").replace(/<\\/div>/gi, \"\\n\");\n    let text = div.textContent || div.innerText || \"\";\n    return text.replace(/\\u00a0/g, \" \").trim();\n  }\n\n  // Parses DSL format: funcName(arg1, arg2) = { ... } OR funcName = { ... }\n  function parseTestField(rawHtml) {\n    let testStr = cleanAnkiField(rawHtml);\n    if (!testStr) return null;\n\n    testStr = testStr.replace(/''/g, '\"');\n    // Match: funcName(params) = { body } or funcName = { body }\n    const mainMatch = testStr.match(/^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*(?:\\(([^)]*)\\))?\\s*=\\s*\\{([\\s\\S]*)\\}\\s*$/);\n    if (!mainMatch) return null;\n\n    const funcName = mainMatch[1];\n    const params = mainMatch[2] !== undefined ? mainMatch[2].trim() : null;\n    const body = mainMatch[3].trim();\n    const testCases = [];\n\n    const pairRegex = /(\\{[^}]*\\}|\"[^\"]*\"|'[^']*'|[^=,\\s]+)\\s*=\\s*(\\{[^}]*\\}|\"[^\"]*\"|'[^']*'|[^,\\s]+)/g;\n    let match;\n\n    while ((match = pairRegex.exec(body)) !== null) {\n      let key = match[1].trim();\n      let val = match[2].trim();\n      let argsLua = (key.startsWith('{') && key.endsWith('}')) ? key : `{ ${key} }`;\n      testCases.push({ argsLua, expectedLua: val });\n    }\n\n    return testCases.length > 0 ? { funcName, params, testCases } : null;\n  }\n\n  function initAceEditor() {\n    if (typeof ace === \"undefined\") return;\n\n    if (window.luaAceEditor) {\n      try {\n        window.luaAceEditor.destroy();\n        window.luaAceEditor.container.remove();\n      } catch (e) {}\n      window.luaAceEditor = null;\n    }\n\n    const container = document.getElementById(\"lua-editor\");\n    if (!container) return;\n\n    window.luaAceEditor = ace.edit(container);\n    window.luaAceEditor.setTheme(\"ace/theme/monokai\");\n    window.luaAceEditor.session.setMode(\"ace/mode/lua\");\n    window.luaAceEditor.setOptions({\n      enableBasicAutocompletion: true,\n      enableLiveAutocompletion: true,\n      enableSnippets: true,\n      showPrintMargin: false,\n      tabSize: 2\n    });\n\n    // Auto-setup function signature in editor from {{test}} field\n    const testSpecRaw = document.getElementById(\"test-spec\").innerHTML;\n    const parsedTests = parseTestField(testSpecRaw);\n\n    let starterCode = \"-- Write your code below\";\n    if (parsedTests) {\n      const argsStr = parsedTests.params !== null ? parsedTests.params : \"...\";\n      starterCode = `function ${parsedTests.funcName}(${argsStr})\\n  -- Write your solution here\\n\\nend`;\n    }\n\n    window.luaAceEditor.setValue(starterCode, 1);\n  }\n\n  setTimeout(initAceEditor, 50);\n\n  function safeLuaToString(L, index) {\n    if (typeof fengari === \"undefined\") return \"\";\n    const ptr = fengari.lua.lua_tostring(L, index);\n    if (!ptr) return \"\";\n    if (ptr instanceof Uint8Array) {\n      return fengari.to_jsstring(ptr);\n    }\n    return String(ptr);\n  }\n\n  function gradeCard(ease) {\n    if (typeof pycmd !== \"undefined\") {\n      pycmd(\"ans\");\n      setTimeout(() => { pycmd(\"ease\" + ease); }, 100);\n    } else if (typeof bridgeCommand !== \"undefined\") {\n      bridgeCommand(\"ans\");\n      setTimeout(() => { bridgeCommand(\"ease\" + ease); }, 100);\n    } else if (typeof AnkiDroidJS !== \"undefined\") {\n      AnkiDroidJS.showAnswer();\n      setTimeout(() => { AnkiDroidJS.answerCard(ease); }, 100);\n    }\n  }\n\n  function executeLuaAndGrade() {\n    const userCode = window.luaAceEditor ? window.luaAceEditor.getValue() : \"\";\n    const expectedOutput = cleanAnkiField(document.getElementById(\"expected-output\").innerHTML);\n    const testSpecRaw = document.getElementById(\"test-spec\").innerHTML;\n    const consoleOutput = document.getElementById(\"console-output\");\n    const testResult = document.getElementById(\"test-result\");\n\n    document.getElementById(\"console-wrapper\").style.display = \"block\";\n    consoleOutput.textContent = \"\";\n\n    if (typeof fengari === \"undefined\") {\n      consoleOutput.textContent = \"Error: _fengari-web.js not found in collection.media.\";\n      return;\n    }\n\n    try {\n      const L = fengari.lauxlib.luaL_newstate();\n      fengari.lualib.luaL_openlibs(L);\n\n      const parsedTests = parseTestField(testSpecRaw);\n      let wrappedCode = \"\";\n\n      if (parsedTests) {\n        const { funcName, testCases } = parsedTests;\n        const casesLua = testCases.map(tc => `{ args = ${tc.argsLua}, expected = ${tc.expectedLua} }`).join(\",\\n\");\n\n        wrappedCode = `\n          ${userCode}\n\n          if type(${funcName}) ~= \"function\" then\n            error(\"Function '${funcName}' is not defined in your code!\")\n          end\n\n          local tests = { ${casesLua} }\n          local logs = {}\n          local passed = 0\n\n          local function equals(a, b)\n            if type(a) ~= type(b) then return false end\n            if type(a) == \"table\" then\n              for k, v in pairs(a) do if not equals(v, b[k]) then return false end end\n              for k, v in pairs(b) do if not equals(v, a[k]) then return false end end\n              return true\n            end\n            return a == b\n          end\n\n          local function dump(v)\n            if v == nil then return \"nil\" end\n            if type(v) == \"string\" then return '\"' .. v .. '\"' end\n            if type(v) == \"table\" then\n              local p = {}\n              for _, item in ipairs(v) do table.insert(p, dump(item)) end\n              return \"{\" .. table.concat(p, \", \") .. \"}\"\n            end\n            return tostring(v)\n          end\n\n          for _, t in ipairs(tests) do\n            local unpack_fn = table.unpack or unpack\n            local args = (type(t.args) == \"table\" and t.args) or { t.args }\n            local ok, res = pcall(${funcName}, unpack_fn(args))\n            local argStr = dump(args):sub(2, -2)\n\n            if ok then\n              if equals(res, t.expected) then\n                passed = passed + 1\n                table.insert(logs, \"✓ PASS: \" .. \"${funcName}\" .. \"(\" .. argStr .. \") == \" .. dump(res))\n              else\n                table.insert(logs, \"✗ FAIL: \" .. \"${funcName}\" .. \"(\" .. argStr .. \")\\\\n   Expected: \" .. dump(t.expected) .. \"\\\\n   Got:      \" .. dump(res))\n              end\n            else\n              table.insert(logs, \"✗ ERROR in \" .. \"${funcName}\" .. \"(\" .. argStr .. \"): \" .. tostring(res))\n            end\n          end\n\n          local is_ok = (passed == #tests)\n          return (is_ok and \"[SUCCESS]\" or \"[FAILURE]\") .. \"\\\\n\" .. table.concat(logs, \"\\\\n\")\n        `;\n      } else {\n        wrappedCode = `\n          local logs = {}\n          print = function(...)\n            local args = {...}\n            for i = 1, #args do args[i] = tostring(args[i]) end\n            table.insert(logs, table.concat(args, \"\\\\t\"))\n          end\n\n          ${userCode}\n\n          return table.concat(logs, \"\\\\n\")\n        `;\n      }\n\n      const status = fengari.lauxlib.luaL_dostring(L, fengari.to_luastring(wrappedCode));\n\n      if (status !== fengari.lua.LUA_OK) {\n        const errMessage = safeLuaToString(L, -1);\n        throw new Error(errMessage || \"Unknown Lua execution error\");\n      }\n\n      const rawResult = safeLuaToString(L, -1).trim();\n\n      if (parsedTests) {\n        const isSuccess = rawResult.startsWith(\"[SUCCESS]\");\n        const cleanReport = rawResult.replace(/^\\[(SUCCESS|FAILURE)\\]\\n?/, \"\");\n        consoleOutput.textContent = cleanReport;\n\n        if (isSuccess) {\n          testResult.style.color = \"#4caf50\";\n          testResult.textContent = \"✓ All unit tests passed! Rating as Good...\";\n          setTimeout(() => { gradeCard(3); }, 1000);\n        } else {\n          testResult.style.color = \"#f44336\";\n          testResult.textContent = \"✗ Unit tests failed.\";\n        }\n      } else {\n        consoleOutput.textContent = rawResult || \"[Code executed with no print output]\";\n        if (rawResult === expectedOutput) {\n          testResult.style.color = \"#4caf50\";\n          testResult.textContent = \"✓ Passed! Rating as Good...\";\n          setTimeout(() => { gradeCard(3); }, 1000);\n        } else {\n          testResult.style.color = \"#f44336\";\n          testResult.textContent = `✗ Failed. Expected output: \"${expectedOutput}\"`;\n        }\n      }\n\n    } catch (err) {\n      consoleOutput.textContent = \"Lua Runtime Error:\\n\" + err.message;\n      testResult.style.color = \"#f44336\";\n      testResult.textContent = \"✗ Code Error\";\n    }\n  }\n</script>",
+          "afmt": "",
+          "bqfmt": "{{Front}}",
+          "bafmt": ""
+        }
+      ]
+    },
+    {
       "name": "TEMPORARY MultiChoice",
       "type": 0,
       "css": ".card {\n  font-family: arial, sans-serif;\n  font-size: 21px;\n  text-align: center;\n  color: #1a1a1a;\n  background-color: #ffffff;\n}\n\n/* Container layout - locked dimensions for Front & Back */\n.front-text {\n  text-align: left;\n  display: inline-block;\n  width: 100%;\n  max-width: 600px;\n  font-size: 21px;\n  line-height: 1.4;\n  box-sizing: border-box;\n}\n\n/* Header & image box */\n.header-container {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  border-radius: 12px;\n  padding: 16px 20px;\n  margin-bottom: 20px;\n  background: transparent;\n  border: none;\n  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);\n  box-sizing: border-box;\n}\n\n.front-header {\n  font-size: 32px !important;\n  font-weight: bold;\n  line-height: 1.2;\n  text-align: left;\n  flex: 1;\n}\n\n.header-image {\n  flex-shrink: 0;\n  margin-left: 15px;\n}\n\n.header-image img {\n  max-height: 120px;\n  width: auto;\n  margin: 0;\n  display: block;\n  border-radius: 6px;\n}\n\n.choices-wrapper {\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  width: 100%;\n  box-sizing: border-box;\n}\n\n/* Choice Buttons - Strictly identical sizing on Front & Back */\n.choice-btn {\n  display: flex;\n  align-items: flex-start;\n  width: 100%;\n  padding: 14px 18px;\n  margin: 0;\n  background-color: #ffffff;\n  color: #1a1a1a;\n  border: 2px solid #e0e0e0;\n  border-radius: 10px;\n  font-size: 21px !important;\n  font-family: arial, sans-serif;\n  line-height: 1.4;\n  text-align: left;\n  cursor: pointer;\n  box-sizing: border-box !important;\n  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);\n  outline: none;\n  -webkit-tap-highlight-color: transparent;\n  user-select: none;\n  transition: background-color 0.15s ease, border-color 0.15s ease;\n}\n\n.choice-btn:hover {\n  background-color: #f5f5f5;\n  border-color: #cccccc;\n}\n\n.choice-btn.selected {\n  border-color: #2196f3;\n  background-color: #e3f2fd;\n  text-shadow: 0 0 0.6px #1a1a1a;\n  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);\n}\n\n.choice-btn.correct {\n  background-color: #4caf50 !important;\n  color: #ffffff !important;\n  border-color: #388e3c !important;\n  text-shadow: 0 0 0.6px #ffffff;\n}\n\n.choice-btn.wrong {\n  background-color: #f44336 !important;\n  color: #ffffff !important;\n  border-color: #d32f2f !important;\n  text-shadow: 0 0 0.6px #ffffff;\n}\n\n.choice-prefix {\n  font-size: 21px !important;\n  font-weight: bold;\n  line-height: 1.4;\n  min-width: 48px;\n  margin-right: 8px;\n  flex-shrink: 0;\n}\n\n.choice-text {\n  font-size: 21px !important;\n  line-height: 1.4;\n  flex-grow: 1;\n}",
@@ -952,6 +1180,75 @@
           "qfmt": "<div class=\"front-text\">\n  {{Front}}\n</div>\n\n<script>\n(function initFront() {\n  sessionStorage.removeItem(\"anki_selected\");\n  sessionStorage.removeItem(\"anki_choices\");\n\n  const container = document.querySelector(\".front-text\");\n  if (!container) return;\n\n  const images = Array.from(container.querySelectorAll(\"img\"));\n  const imagesHTML = images.map(img => img.outerHTML).join(\"\");\n\n  let textContent = container.innerHTML\n    .replace(/<br\\s*\\/?>/gi, \"\\n\")\n    .replace(/<\\/div>/gi, \"\\n\")\n    .replace(/<\\/p>/gi, \"\\n\");\n  \n  let tempDiv = document.createElement(\"div\");\n  tempDiv.innerHTML = textContent;\n  let cleanText = tempDiv.innerText || tempDiv.textContent || \"\";\n\n  let lines = cleanText.split(\"\\n\").map(l => l.trim()).filter(l => l.length > 0);\n  if (lines.length <= 1) return;\n\n  const header = lines[0];\n\n  // Safely strips leading whitespace and optional prefixes (e.g. aslfj:, 238324:, :, 1., a))\n  let choices = lines.slice(1).map((text, idx) => {\n    let cleanChoiceText = text.replace(/^\\s*([a-zA-Z0-9_-]*[:\\.\\)])?\\s*/, \"\").trim();\n    return {\n      text: cleanChoiceText || text.trim(),\n      originalIndex: idx + 1\n    };\n  });\n\n  // Fisher-Yates Shuffle\n  for (let i = choices.length - 1; i > 0; i--) {\n    const j = Math.floor(Math.random() * (i + 1));\n    [choices[i], choices[j]] = [choices[j], choices[i]];\n  }\n\n  sessionStorage.setItem(\"anki_choices\", JSON.stringify(choices));\n  sessionStorage.setItem(\"anki_header\", header);\n\n  const formattedChoices = choices.map(item => {\n    return `<div class=\"choice-btn\" data-index=\"${item.originalIndex}\" onclick=\"selectChoice(this, ${item.originalIndex})\" ondblclick=\"confirmChoice(this, ${item.originalIndex})\"><span class=\"choice-text\">${item.text}</span></div>`;\n  });\n\n  const headerSection = `<div class=\"header-container\"><div class=\"front-header\">${header}</div>${imagesHTML ? `<div class=\"header-image\">${imagesHTML}</div>` : ''}</div>`;\n  container.innerHTML = headerSection + `<div class=\"choices-wrapper\">` + formattedChoices.join(\"\") + `</div>`;\n})();\n\nfunction selectChoice(btn, index) {\n  sessionStorage.setItem(\"anki_selected\", index);\n  document.querySelectorAll(\".choice-btn\").forEach(b => b.classList.remove(\"selected\"));\n  btn.classList.add(\"selected\");\n}\n\nfunction confirmChoice(btn, index) {\n  selectChoice(btn, index);\n  if (typeof pycmd !== \"undefined\") {\n    pycmd(\"ans\");\n  } else if (typeof AnkiDroidJS !== \"undefined\") {\n    AnkiDroidJS.showAnswer();\n  }\n}\n</script>",
           "afmt": "<div class=\"front-text\" id=\"back-container\">\n  {{Front}}\n</div>\n\n<!-- Hidden Answer Reference -->\n<div id=\"correct-answer-index\" style=\"display: none;\">{{Back}}</div>\n\n<script>\n(function initBackAndGrade() {\n  const targetElement = document.getElementById(\"correct-answer-index\");\n  const rawText = targetElement ? targetElement.innerText.trim() : \"\";\n  const match = rawText.match(/\\d+/);\n  const correctIndex = match ? parseInt(match[0], 10) : null;\n\n  const savedSelected = sessionStorage.getItem(\"anki_selected\");\n  const selectedIndex = savedSelected !== null ? parseInt(savedSelected, 10) : null;\n\n  const savedChoicesStr = sessionStorage.getItem(\"anki_choices\");\n  const container = document.getElementById(\"back-container\");\n\n  if (savedChoicesStr && container) {\n    const choices = JSON.parse(savedChoicesStr);\n    const header = sessionStorage.getItem(\"anki_header\") || \"\";\n\n    const formattedChoices = choices.map(item => {\n      let statusClass = \"\";\n      if (item.originalIndex === correctIndex) {\n        statusClass = \"correct\";\n      } else if (item.originalIndex === selectedIndex) {\n        statusClass = \"wrong\";\n      }\n\n      // Output matches Front Template structure to prevent layout shifts\n      return `<div class=\"choice-btn ${statusClass}\"><span class=\"choice-text\">${item.text}</span></div>`;\n    });\n\n    const images = Array.from(container.querySelectorAll(\"img\"));\n    const imagesHTML = images.map(img => img.outerHTML).join(\"\");\n    const headerSection = `<div class=\"header-container\"><div class=\"front-header\">${header}</div>${imagesHTML ? `<div class=\"header-image\">${imagesHTML}</div>` : ''}</div>`;\n\n    container.innerHTML = headerSection + `<div class=\"choices-wrapper\">` + formattedChoices.join(\"\") + `</div>`;\n  }\n\n  // Auto-grade timing (100ms if correct, 3000ms if wrong)\n  const isCorrect = (selectedIndex === correctIndex);\n  const ease = isCorrect ? 3 : 1;\n  const autoGradeDelay = isCorrect ? 100 : 3000;\n\n  setTimeout(() => {\n    if (typeof pycmd !== \"undefined\") {\n      pycmd(\"ease\" + ease);\n    } else if (typeof AnkiDroidJS !== \"undefined\") {\n      AnkiDroidJS.answerCard(ease);\n    }\n  }, autoGradeDelay);\n})();\n</script>",
           "bqfmt": "",
+          "bafmt": ""
+        }
+      ]
+    },
+    {
+      "name": "TEMPORARY shuffle",
+      "type": 0,
+      "css": ".shuffle-container, .shuffle-container * {\n  box-sizing: border-box !important;\n  margin: 0;\n  padding: 0;\n}\n\n.card {\n  font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif;\n  font-size: 18px;\n  text-align: center;\n  color: #2c3e50;\n  background-color: #f8f9fa;\n  padding: 15px;\n}\n\n.shuffle-container {\n  max-width: 600px;\n  margin: 0 auto;\n}\n\n.translation-hint {\n  font-size: 1.25em;\n  font-weight: 600;\n  margin-bottom: 15px;\n  color: #34495e;\n}\n\n.status-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  margin: 12px 4px 6px 4px;\n}\n\n.box-label {\n  font-size: 0.8em;\n  text-align: left;\n  color: #7f8c8d;\n  text-transform: uppercase;\n  letter-spacing: 0.5px;\n}\n\n.feedback-badge {\n  font-size: 0.85em;\n  font-weight: bold;\n}\n\n.correct-badge { color: #2ecc71; }\n.incorrect-badge { color: #e74c3c; }\n\n.word-box {\n  min-height: 75px;\n  background: #ffffff;\n  border: 2px dashed #bdc3c7;\n  border-radius: 12px;\n  padding: 10px;\n  display: flex;\n  flex-wrap: wrap;\n  gap: 10px;\n  align-items: center;\n  justify-content: flex-start;\n  transition: background-color 0.15s ease, border-color 0.15s ease;\n}\n\n.source-box {\n  border: 2px solid #e0e0e0;\n  background: #f1f3f5;\n}\n\n.target-box.correct {\n  border-style: solid;\n  border-color: #2ecc71;\n  background-color: #e8f8f5;\n}\n\n.target-box.incorrect {\n  border-style: solid;\n  border-color: #e74c3c;\n  background-color: #fadbd8;\n}\n\n.placeholder {\n  color: #95a5a6;\n  font-size: 0.9em;\n  font-style: italic;\n  width: 100%;\n  text-align: center;\n  user-select: none;\n}\n\n/* Word Chips */\n.word-chip {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  background: #3498db;\n  color: #ffffff;\n  border: none !important;\n  outline: none !important;\n  border-radius: 10px;\n  padding: 8px 16px !important;\n  font-size: 17px !important;\n  font-weight: 500;\n  line-height: 1.2;\n  cursor: grab;\n  user-select: none;\n  -webkit-tap-highlight-color: transparent;\n  box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n  transition: background-color 0.15s ease, transform 0.1s ease;\n}\n\n.word-chip:hover {\n  background: #2980b9;\n}\n\n.word-chip:active {\n  cursor: grabbing;\n}\n\n.active-chip {\n  background: #2980b9;\n}\n\n.active-chip:hover {\n  background: #1f618d;\n}\n\n.word-chip.dragging {\n  opacity: 0.2;\n}\n\n/* Dynamic shifting placeholder spot */\n.chip-placeholder {\n  background: #e0e6ed;\n  border: 2px dashed #3498db;\n  border-radius: 10px;\n  height: 45px;\n  pointer-events: none;\n  animation: pulsePlaceholder 0.8s infinite alternate;\n}\n\n@keyframes pulsePlaceholder {\n  from { opacity: 0.6; }\n  to { opacity: 1; }\n}\n\n.controls {\n  margin-top: 15px;\n}\n\n.btn-reset {\n  background: #95a5a6;\n  color: white;\n  border: none;\n  outline: none !important;\n  border-radius: 6px;\n  padding: 6px 14px;\n  font-size: 0.85em;\n  cursor: pointer;\n  transition: background-color 0.15s ease;\n}\n\n.btn-reset:hover {\n  background: #7f8c8d;\n}\n\n/* Night Mode Support */\n.nightMode .card { background-color: #1e1e1e; color: #ecf0f1; }\n.nightMode .word-box { background: #2d2d2d; border-color: #444; }\n.nightMode .source-box { background: #252525; }\n.nightMode .chip-placeholder { background: #3a3a3a; border-color: #555; }\n.nightMode .translation-hint { color: #ecf0f1; }\n.nightMode .box-label { color: #95a5a6; }\n.nightMode .target-box.correct { background-color: #1b382b; border-color: #2ecc71; }\n.nightMode .target-box.incorrect { background-color: #3d1f1d; border-color: #e74c3c; }\n\n/* Responsive Video Support inside Translation */\n.translation-hint video {\n  max-width: 100%;\n  max-height: 260px;\n  width: auto;\n  height: auto;\n  border-radius: 10px;\n  margin: 0 auto 10px auto;\n  display: block;\n  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);\n}\n\n/* Fix for audio elements if embedded alongside */\n.translation-hint audio {\n  max-width: 100%;\n  margin-top: 8px;\n}",
+      "latex_pre": "\\documentclass[12pt]{article}\n\\special{papersize=3in,5in}\n\\usepackage[utf8]{inputenc}\n\\usepackage{amssymb,amsmath}\n\\pagestyle{empty}\n\\setlength{\\parindent}{0in}\n\\begin{document}\n",
+      "latex_post": "\\end{document}",
+      "latex_svg": false,
+      "sort_field_index": 0,
+      "fields": [
+        {
+          "name": "Sentence",
+          "ord": 0,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        },
+        {
+          "name": "Translation",
+          "ord": 1,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        },
+        {
+          "name": "Video",
+          "ord": 2,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        },
+        {
+          "name": "don't use vid",
+          "ord": 3,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
+        }
+      ],
+      "templates": [
+        {
+          "name": "Card 1",
+          "ord": 0,
+          "qfmt": "<div class=\"shuffle-container\">\n  {{#Video}}\n  <div class=\"video-wrapper\" style=\"text-align:center; margin-bottom: 12px;\">\n    <video id=\"card-video\" src=\"{{Video}}\" autoplay playsinline style=\"max-width:100%; height:auto; border-radius: 8px;\"></video>\n  </div>\n  {{/Video}}\n\n  {{#Translation}}\n  <div class=\"translation-hint\">\n    {{Translation}}\n  </div>\n  {{/Translation}}\n\n  <div class=\"status-header\">\n    <span class=\"box-label\">Your sentence:</span>\n    <span id=\"feedback-badge\" class=\"feedback-badge\"></span>\n  </div>\n\n  <div id=\"target-box\" class=\"word-box target-box\">\n    <span class=\"placeholder\">Tap or drag words here...</span>\n  </div>\n\n  <div class=\"box-label\">Word bank:</div>\n  <div id=\"source-box\" class=\"word-box source-box\"></div>\n\n  <div id=\"hidden-sentence\" style=\"display:none;\">{{Sentence}}</div>\n\n  <div class=\"controls\">\n    <button type=\"button\" class=\"btn-replay\" onclick=\"replayVideo()\">▶ Play Video</button>\n    <button type=\"button\" class=\"btn-reset\" onclick=\"resetShuffle()\">↺ Reset</button>\n  </div>\n</div>\n\n<script>\n(function() {\n  // Replay video function\n  window.replayVideo = function() {\n    var vid = document.getElementById('card-video');\n    if (vid) {\n      vid.currentTime = 0;\n      vid.muted = false; // Unmutes audio on manual replay\n      vid.play();\n    }\n  };\n\n  var sentenceElem = document.getElementById('hidden-sentence');\n  if (!sentenceElem) return;\n\n  var originalText = sentenceElem.innerText.trim();\n  if (!originalText) return;\n\n  var originalWords = originalText.split(/\\s+/).filter(Boolean);\n  \n  var pool = originalWords.map(function(w, i) {\n    return { id: i, text: w };\n  });\n\n  function shuffle(array) {\n    var arr = array.slice();\n    for (var i = arr.length - 1; i > 0; i--) {\n      var j = Math.floor(Math.random() * (i + 1));\n      var temp = arr[i];\n      arr[i] = arr[j];\n      arr[j] = temp;\n    }\n    return arr;\n  }\n\n  var available = shuffle(pool);\n  var selected = [];\n  var draggedData = null;\n\n  var placeholder = document.createElement('div');\n  placeholder.className = 'chip-placeholder';\n\n  function removePlaceholder() {\n    if (placeholder.parentNode) {\n      placeholder.parentNode.removeChild(placeholder);\n    }\n  }\n\n  function getDragAfterElement(container, x, y) {\n    var chips = Array.from(container.querySelectorAll('.word-chip:not(.dragging)'));\n    \n    for (var i = 0; i < chips.length; i++) {\n      var box = chips[i].getBoundingClientRect();\n      var boxCenter = box.left + box.width / 2;\n      \n      if (y < box.bottom && (y < box.top || x < boxCenter)) {\n        return chips[i];\n      }\n    }\n    return null;\n  }\n\n  function render() {\n    removePlaceholder();\n    var targetBox = document.getElementById('target-box');\n    var sourceBox = document.getElementById('source-box');\n    var badge = document.getElementById('feedback-badge');\n    if (!targetBox || !sourceBox) return;\n\n    targetBox.innerHTML = '';\n    sourceBox.innerHTML = '';\n\n    if (selected.length === 0) {\n      targetBox.innerHTML = '<span class=\"placeholder\">Tap or drag words here...</span>';\n    } else {\n      selected.forEach(function(item, index) {\n        targetBox.appendChild(createChip(item, 'target', index));\n      });\n    }\n\n    available.forEach(function(item, index) {\n      sourceBox.appendChild(createChip(item, 'source', index));\n    });\n\n    if (available.length === 0 && selected.length > 0) {\n      var currentOrder = selected.map(function(i) { return i.text; }).join(' ');\n      if (currentOrder === originalWords.join(' ')) {\n        targetBox.classList.add('correct');\n        targetBox.classList.remove('incorrect');\n        if (badge) { badge.innerText = '✓ Correct'; badge.className = 'feedback-badge correct-badge'; }\n      } else {\n        targetBox.classList.add('incorrect');\n        targetBox.classList.remove('correct');\n        if (badge) { badge.innerText = '✕ Incorrect'; badge.className = 'feedback-badge incorrect-badge'; }\n      }\n    } else {\n      targetBox.classList.remove('correct', 'incorrect');\n      if (badge) { badge.innerText = ''; badge.className = 'feedback-badge'; }\n    }\n\n    setupBoxEvents(targetBox, sourceBox);\n  }\n\n  function createChip(item, location, index) {\n    var chip = document.createElement('button');\n    chip.type = 'button';\n    chip.className = 'word-chip' + (location === 'target' ? ' active-chip' : '');\n    chip.innerText = item.text;\n    chip.draggable = true;\n\n    chip.onclick = function() {\n      if (location === 'target') {\n        selected.splice(index, 1);\n        available.push(item);\n      } else {\n        available.splice(index, 1);\n        selected.push(item);\n      }\n      render();\n    };\n\n    chip.addEventListener('dragstart', function(e) {\n      draggedData = { item: item, location: location, index: index };\n      chip.classList.add('dragging');\n      placeholder.style.width = chip.offsetWidth + 'px';\n      e.dataTransfer.effectAllowed = 'move';\n    });\n\n    chip.addEventListener('dragend', function() {\n      chip.classList.remove('dragging');\n      removePlaceholder();\n      draggedData = null;\n    });\n\n    return chip;\n  }\n\n  function setupBoxEvents(targetBox, sourceBox) {\n    targetBox.ondragover = function(e) {\n      e.preventDefault();\n      if (!draggedData) return;\n\n      var placeholderSpan = targetBox.querySelector('.placeholder');\n      if (placeholderSpan) placeholderSpan.style.display = 'none';\n\n      var afterElement = getDragAfterElement(targetBox, e.clientX, e.clientY);\n      if (afterElement) {\n        targetBox.insertBefore(placeholder, afterElement);\n      } else {\n        targetBox.appendChild(placeholder);\n      }\n    };\n\n    targetBox.ondragleave = function(e) {\n      if (e.target === targetBox && !targetBox.contains(e.relatedTarget)) {\n        removePlaceholder();\n        var placeholderSpan = targetBox.querySelector('.placeholder');\n        if (placeholderSpan && selected.length === 0) {\n          placeholderSpan.style.display = 'block';\n        }\n      }\n    };\n\n    targetBox.ondrop = function(e) {\n      e.preventDefault();\n      if (!draggedData) return;\n\n      var children = Array.from(targetBox.querySelectorAll('.word-chip:not(.dragging), .chip-placeholder'));\n      var insertIndex = children.indexOf(placeholder);\n      if (insertIndex === -1) insertIndex = selected.length;\n\n      if (draggedData.location === 'source') {\n        available.splice(draggedData.index, 1);\n      } else {\n        selected.splice(draggedData.index, 1);\n        if (draggedData.index < insertIndex) insertIndex--;\n      }\n\n      selected.splice(insertIndex, 0, draggedData.item);\n      render();\n    };\n\n    sourceBox.ondragover = function(e) {\n      e.preventDefault();\n      removePlaceholder();\n    };\n\n    sourceBox.ondrop = function(e) {\n      e.preventDefault();\n      if (!draggedData) return;\n\n      if (draggedData.location === 'target') {\n        selected.splice(draggedData.index, 1);\n        available.push(draggedData.item);\n        render();\n      }\n    };\n  }\n\n  window.resetShuffle = function() {\n    available = shuffle(pool);\n    selected = [];\n    render();\n  };\n\n  render();\n})();\n</script>",
+          "afmt": "{{FrontSide}}\n\n<hr id=\"answer\">\n\n<div class=\"box-label\" style=\"text-align:center; margin-top:15px;\">Correct Answer:</div>\n<div style=\"font-size: 1.3em; font-weight: bold; color: #2ecc71; margin-top: 5px;\">\n  {{Sentence}}\n</div>",
+          "bqfmt": "{{Sentence}}",
           "bafmt": ""
         }
       ]
@@ -1129,14 +1426,26 @@
           "plainText": false,
           "collapsed": false,
           "excludeFromSearch": false
+        },
+        {
+          "name": "Front audio",
+          "ord": 3,
+          "font": "Arial",
+          "size": 20,
+          "sticky": false,
+          "rtl": false,
+          "description": "",
+          "plainText": false,
+          "collapsed": false,
+          "excludeFromSearch": false
         }
       ],
       "templates": [
         {
           "name": "Card 1",
           "ord": 0,
-          "qfmt": "<div class=\"box\">\n<div class=\"front\">{{Front}}</div>\n<div class=\"japanese\">{{Japanese}}</div>\n\n<!-- Custom Static Graphic -->\n<div class=\"graphic-container\">\n    <img src=\"_eigo_tomaranai_v2.webp\">\n</div>\n</div>\n<svg class=\"shape\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 200\" width=\"120\" height=\"120\">\n  <!-- The 10-pointed smooth wavy badge background -->\n  <path d=\"M 100,32 \n           Q 128,13 140,45 \n           Q 174,46 165,79 \n           Q 192,100 165,121 \n           Q 174,154 140,155 \n           Q 128,188 100,168 \n           Q 72,188 60,155 \n           Q 26,154 35,121 \n           Q 8,100 35,79 \n           Q 26,46 60,45 \n           Q 72,13 100,32 Z\" \n        fill=\"#FF3DB7\" />\n</svg>\n\n<script>\n// Wrapping in a function prevents conflicting with other card scripts\n(function() {\n    const badge = document.querySelector('.shape');\n    if (!badge) return;\n\n    const rotationSpeed = 50 * 1000; // 10000ms = 10 seconds per full rotation. Lower = faster.\n\n    function updateSpin() {\n        // Calculate the exact angle based on the real-world timestamp\n        const currentAngle = ((Date.now() % rotationSpeed) / rotationSpeed) * 360;\n        badge.style.transform = `rotate(${currentAngle}deg)`;\n        \n        // Keeps the loop running smoothly at max frame rate\n        requestAnimationFrame(updateSpin);\n    }\n\n    updateSpin();\n})();\n</script>\n",
-          "afmt": "<div class=\"box\">\n<div class=\"front\">{{Front}}</div>\n<div class=\"back\">\n  {{Back}}\n</div>\n\n<!-- Custom Static Graphic -->\n<div class=\"graphic-container\">\n    <img src=\"_eigo_tomaranai_v2.webp\">\n</div>\n</div>\n<svg class=\"shape\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 200\" width=\"120\" height=\"120\">\n  <!-- The 10-pointed smooth wavy badge background -->\n  <path d=\"M 100,32 \n           Q 128,13 140,45 \n           Q 174,46 165,79 \n           Q 192,100 165,121 \n           Q 174,154 140,155 \n           Q 128,188 100,168 \n           Q 72,188 60,155 \n           Q 26,154 35,121 \n           Q 8,100 35,79 \n           Q 26,46 60,45 \n           Q 72,13 100,32 Z\" \n        fill=\"#FF3DB7\" />\n</svg>\n\n<script>\n// Wrapping in a function prevents conflicting with other card scripts\n(function() {\n    const badge = document.querySelector('.shape');\n    if (!badge) return;\n\n    const rotationSpeed = 50 * 1000; // 10000ms = 10 seconds per full rotation. Lower = faster.\n\n    function updateSpin() {\n        // Calculate the exact angle based on the real-world timestamp\n        const currentAngle = ((Date.now() % rotationSpeed) / rotationSpeed) * 360;\n        badge.style.transform = `rotate(${currentAngle}deg)`;\n        \n        // Keeps the loop running smoothly at max frame rate\n        requestAnimationFrame(updateSpin);\n    }\n\n    updateSpin();\n})();\n</script>\n",
+          "qfmt": "<div class=\"box\">\n<div class=\"front\">\n\t{{Front}}\n\t<div style=\"display:none;\">{{Front audio}}</div>\n</div>\n<div class=\"japanese\">{{Japanese}}</div>\n\n<!-- Custom Static Graphic -->\n<div class=\"graphic-container\">\n    <img src=\"_eigo_tomaranai_v2.webp\" style=\"pointer-events: none; user-select: none;\">\n</div>\n</div>\n<svg class=\"shape\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 200\" width=\"120\" height=\"120\">\n  <!-- The 10-pointed smooth wavy badge background -->\n  <path d=\"M 100,32 \n           Q 128,13 140,45 \n           Q 174,46 165,79 \n           Q 192,100 165,121 \n           Q 174,154 140,155 \n           Q 128,188 100,168 \n           Q 72,188 60,155 \n           Q 26,154 35,121 \n           Q 8,100 35,79 \n           Q 26,46 60,45 \n           Q 72,13 100,32 Z\" \n        fill=\"#FF3DB7\" />\n</svg>\n\n<script>\n// Wrapping in a function prevents conflicting with other card scripts\n(function() {\n    const badge = document.querySelector('.shape');\n    if (!badge) return;\n\n    const rotationSpeed = 50 * 1000; // 10000ms = 10 seconds per full rotation. Lower = faster.\n\n    function updateSpin() {\n        // Calculate the exact angle based on the real-world timestamp\n        const currentAngle = ((Date.now() % rotationSpeed) / rotationSpeed) * 360;\n        badge.style.transform = `rotate(${currentAngle}deg)`;\n        \n        // Keeps the loop running smoothly at max frame rate\n        requestAnimationFrame(updateSpin);\n    }\n\n    updateSpin();\n})();\n</script>\n",
+          "afmt": "<div class=\"box\">\n<div class=\"front\">{{Front}}</div>\n<div class=\"back\">\n  {{Back}}\n</div>\n\n<!-- Custom Static Graphic -->\n<div class=\"graphic-container\">\n    <img src=\"_eigo_tomaranai_v2.webp\" style=\"pointer-events: none; user-select: none;\">\n</div>\n</div>\n<svg class=\"shape\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 200\" width=\"120\" height=\"120\">\n  <!-- The 10-pointed smooth wavy badge background -->\n  <path d=\"M 100,32 \n           Q 128,13 140,45 \n           Q 174,46 165,79 \n           Q 192,100 165,121 \n           Q 174,154 140,155 \n           Q 128,188 100,168 \n           Q 72,188 60,155 \n           Q 26,154 35,121 \n           Q 8,100 35,79 \n           Q 26,46 60,45 \n           Q 72,13 100,32 Z\" \n        fill=\"#FF3DB7\" />\n</svg>\n\n<script>\n// Wrapping in a function prevents conflicting with other card scripts\n(function() {\n    const badge = document.querySelector('.shape');\n    if (!badge) return;\n\n    const rotationSpeed = 50 * 1000; // 10000ms = 10 seconds per full rotation. Lower = faster.\n\n    function updateSpin() {\n        // Calculate the exact angle based on the real-world timestamp\n        const currentAngle = ((Date.now() % rotationSpeed) / rotationSpeed) * 360;\n        badge.style.transform = `rotate(${currentAngle}deg)`;\n        \n        // Keeps the loop running smoothly at max frame rate\n        requestAnimationFrame(updateSpin);\n    }\n\n    updateSpin();\n})();\n</script>\n",
           "bqfmt": "",
           "bafmt": ""
         }
@@ -1144,9 +1453,9 @@
     }
   ],
   "metadata": {
-    "exported_at": "2026-08-30T03:54:14.037998Z",
+    "exported_at": "2026-09-06T21:57:13.603705Z",
     "anki_version": "25.09.4",
     "addon_version": "1.0.0",
-    "count": 17
+    "count": 22
   }
 }
