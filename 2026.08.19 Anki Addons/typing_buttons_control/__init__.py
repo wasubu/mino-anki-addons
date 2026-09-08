@@ -1,3 +1,6 @@
+from . import only_again
+only_again.setup()
+
 from aqt import gui_hooks
 from aqt.reviewer import Reviewer
 from anki.hooks import wrap
@@ -8,7 +11,6 @@ def compare_answers(correct: str, typed: str) -> str:
     result = []
     min_len = min(len(correct), len(typed))
     has_error = False  # track if any difference found
-
     for i in range(min_len):
         if typed[i] == correct[i]:
             color = "#a6f3a6"  # green
@@ -49,9 +51,6 @@ def compare_answers(correct: str, typed: str) -> str:
     </div>
     '''
 
-
-
-
 # Override typebox answer filter: save correctness & return colored feedback
 def new_typeboxAnsAnswerFilter(self, buf: str) -> str:
     if not getattr(self, "typeCorrect", None):  # Skip if not a type answer card
@@ -78,7 +77,6 @@ def custom_answer_buttons(self, _old):
         return btn(3, "Good") if self._typebox_correct else btn(1, "Again")
     else:
         return _old(self)  # fix: pass self
-
 Reviewer._answerButtons = wrap(Reviewer._answerButtons, custom_answer_buttons, "around")
 
 # Clear flag between cards
