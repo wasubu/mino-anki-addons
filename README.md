@@ -17,3 +17,6 @@ found this neat anki addon that allows you to import / export your note types.
 https://ankiweb.net/shared/info/1513387587
 
 just go to Tools > Import Note Types...
+
+## TODOS - what the future holds
+- [ ] This repo should be ranamed to 'mino-anki' as this repo does more than hold my add-ons and scripts
