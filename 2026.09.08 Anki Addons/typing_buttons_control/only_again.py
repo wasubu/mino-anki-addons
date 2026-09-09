@@ -1,5 +1,6 @@
-from aqt import gui_hooks
 from anki.cards import Card
+from aqt import gui_hooks
+from aqt.reviewer import Reviewer
 
 
 def _has_target_tag(card: Card) -> bool:
@@ -17,15 +18,19 @@ def _force_only_again_button(buttons_tuple, reviewer, card: Card):
     return buttons_tuple
 
 
-def _force_again_ease(ease_tuple, reviewer, card: Card):
-    if _has_target_tag(card):
-        cont, _ = ease_tuple
-        return (cont, 1)
+# Monkey-patch _answerCard directly so third-party audio/visual add-ons
+# read ease=1 BEFORE playing chimes or animations.
+_old_answerCard = Reviewer._answerCard
 
-    return ease_tuple
+
+def _only_again_safe_answerCard(self, ease):
+    if self.card and _has_target_tag(self.card):
+        ease = 1
+
+    return _old_answerCard(self, ease)
 
 
 def setup():
-    """Registers hooks for the ONLY_AGAIN tag logic."""
+    """Registers hooks and method overrides for the ONLY_AGAIN tag logic."""
     gui_hooks.reviewer_will_init_answer_buttons.append(_force_only_again_button)
-    gui_hooks.reviewer_will_answer_card.append(_force_again_ease)
+    Reviewer._answerCard = _only_again_safe_answerCard
