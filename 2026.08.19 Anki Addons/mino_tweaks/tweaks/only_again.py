@@ -1,4 +1,5 @@
 from aqt import gui_hooks
+from aqt.reviewer import Reviewer
 
 
 def _has_target_tag(card) -> bool:
@@ -13,14 +14,16 @@ def _force_only_again_button(buttons_tuple, reviewer, card):
     return buttons_tuple
 
 
-def _force_again_ease(ease_tuple, reviewer, card):
-    if _has_target_tag(card):
-        cont, _ = ease_tuple
-        return (cont, 1)
-    return ease_tuple
+_orig_answerCard = Reviewer._answerCard
+
+
+def _patched_answerCard(self, ease: int):
+    if _has_target_tag(self.card):
+        ease = 1
+    return _orig_answerCard(self, ease)
 
 
 def setup():
-    """Registers hooks for the ONLY_AGAIN tag logic."""
+    """Registers button limits and patches answer processing."""
     gui_hooks.reviewer_will_init_answer_buttons.append(_force_only_again_button)
-    gui_hooks.reviewer_will_answer_card.append(_force_again_ease)
+    Reviewer._answerCard = _patched_answerCard
