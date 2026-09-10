@@ -17,10 +17,6 @@ def _force_only_again_button(buttons_tuple, reviewer, card):
 
 
 def _force_again_ease(ease_tuple, reviewer, card):
-    # Allow Good to pass if we are in the bypass state
-    if getattr(reviewer, "_bypassing_only_again", False):
-        return ease_tuple
-
     if _has_target_tag(card):
         cont, _ = ease_tuple
         return (cont, 1)
@@ -41,16 +37,26 @@ def _handle_js_message(
         reviewer = getattr(mw, "reviewer", None)
         if reviewer and reviewer.card:
             card = reviewer.card
+            note = card.note()
 
-            button_count = mw.col.sched.answerButtons(card)
-            good_ease = 2 if button_count in (2, 3) else 3
+            # 1. Remove tag in-memory ONLY (no note.flush())
+            had_tag = False
+            if note and note.has_tag("ONLY_AGAIN"):
+                had_tag = True
+                note.tags = [t for t in note.tags if t.lower() != "only_again"]
 
-            # Set flag -> Answer card -> Clear flag
-            reviewer._bypassing_only_again = True
             try:
+                # 2. Determine correct 'Good' ease rating
+                button_count = mw.col.sched.answerButtons(card)
+                good_ease = 2 if button_count in (2, 3) else 3
+
+                # 3. Rate card as Good
                 reviewer._answerCard(good_ease)
             finally:
-                reviewer._bypassing_only_again = False
+                # 4. Restore tag in-memory ONLY (no note.flush())
+                if had_tag and note:
+                    if not note.has_tag("ONLY_AGAIN"):
+                        note.tags.append("ONLY_AGAIN")
 
         return (True, None)
 
