@@ -1,4 +1,7 @@
 from aqt import gui_hooks, mw
+from aqt.reviewer import Reviewer
+
+_orig_defaultEase = None
 
 
 def _has_target_tag(card) -> bool:
@@ -22,6 +25,13 @@ def _force_again_ease(ease_tuple, reviewer, card):
         cont, _ = ease_tuple
         return (cont, 1)
     return ease_tuple
+
+
+def _patched_defaultEase(self):
+    # Return 1 for Spacebar/Enter so default actions pass ease=1 to _answerCard
+    if self.card and _has_target_tag(self.card):
+        return 1
+    return _orig_defaultEase(self)
 
 
 def _handle_js_message(
@@ -49,6 +59,13 @@ def _handle_js_message(
 
 def setup():
     """Registers hooks for ONLY_AGAIN logic and JS webview messages."""
+    global _orig_defaultEase
+
     gui_hooks.reviewer_will_init_answer_buttons.append(_force_only_again_button)
     gui_hooks.reviewer_will_answer_card.append(_force_again_ease)
     gui_hooks.webview_did_receive_js_message.append(_handle_js_message)
+
+    # Patch defaultEase so Spacebar triggers ease 1 natively
+    if _orig_defaultEase is None:
+        _orig_defaultEase = Reviewer._defaultEase
+        Reviewer._defaultEase = _patched_defaultEase
