@@ -3,11 +3,11 @@ import pkgutil
 from aqt import mw
 from aqt.qt import QAction, QMenu
 
-MENU_TITLE = "mino"
+MENU_TITLE = "Mino"
 
 
 def _get_or_create_mino_menu() -> QMenu:
-    """Find existing 'mino' menu in main menubar or create a new one."""
+    """Find existing 'Mino' menu in main menubar or create a new one."""
     menubar = mw.form.menubar
     for action in menubar.actions():
         if action.text() == MENU_TITLE:
@@ -18,10 +18,6 @@ def _get_or_create_mino_menu() -> QMenu:
 def setup_addon_menu():
     mino_menu = _get_or_create_mino_menu()
 
-    # Create sub-menu for tweak toggles
-    tweaks_menu = QMenu("Toggle Tweaks (Restart Needed)", mino_menu)
-    mino_menu.addMenu(tweaks_menu)
-
     config = mw.addonManager.getConfig(__name__) or {}
     disabled_tweaks = set(config.get("disabled_tweaks", []))
 
@@ -29,13 +25,13 @@ def setup_addon_menu():
     if not tweaks_dir.is_dir():
         return
 
-    # Populate menu with available tweaks
+    # Populate root Mino menu directly with tweak toggles
     for _, module_name, is_pkg in pkgutil.iter_modules([str(tweaks_dir)]):
         if is_pkg or module_name.startswith("_"):
             continue
 
         display_name = module_name.replace("_", " ").title()
-        action = QAction(display_name, tweaks_menu)
+        action = QAction(display_name, mino_menu)
         action.setCheckable(True)
         action.setChecked(module_name not in disabled_tweaks)
 
@@ -54,4 +50,4 @@ def setup_addon_menu():
             return _toggle
 
         action.triggered.connect(_make_handler(module_name))
-        tweaks_menu.addAction(action)
+        mino_menu.addAction(action)
