@@ -1,8 +1,10 @@
 {
-  "english": [
+"english": [
     "the", "a", "an", "is", "are", "was", "were", "to", "in", 
     "on", "at", "by", "for", "with", "about", "against", "between", 
-    "into", "through", "during", "before", "after", "above", "below"
+    "into", "through", "during", "before", "after", "above", "below",
+    "from", "of", "over", "under", "up", "down", "out", "off",
+    "and", "but", "or", "so"
   ],
   "chords": [
     "C", "Fm", "G7", "Am", "Dm", "Em", "G", "F", "Bb", "D7"
