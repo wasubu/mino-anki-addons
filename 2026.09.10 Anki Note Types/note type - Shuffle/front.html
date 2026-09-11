@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v10.1 -->
+<!-- front.html - do not delete this line nor modify. v10.2 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -40,6 +40,9 @@
     align-items: center;
     justify-content: center;
   }
+  .shuffle-container .word-chip.dragging {
+    opacity: 0.3;
+  }
   .shuffle-container .word-chip.locked-chip {
     background-color: #e8f5e9 !important;
     color: #2e7d32 !important;
@@ -67,22 +70,22 @@
   }
 
   @keyframes glide {
-  from {
-    translate: var(--dx) var(--dy);
+    from {
+      translate: var(--dx) var(--dy);
+    }
+    to {
+      translate: 0 0;
+    }
   }
-  to {
-    translate: 0 0;
-  }
-}
 
-@keyframes pop {
-  0%, 100% {
-    scale: 1;
+  @keyframes pop {
+    0%, 100% {
+      scale: 1;
+    }
+    50% {
+      scale: 1.8;
+    }
   }
-  50% {
-    scale: 1.8;
-  }
-}
 </style>
 
 <div class="shuffle-container {{#Video}}has-video{{/Video}}">
@@ -285,19 +288,16 @@
       if (!targetBox || !sourceBox) return;
 
       if (isLongSentence && !hasAnimatedLock) {
-        // 1. Add locked word to end of source pool to measure its start position
         available.push(lockedItem);
         renderBoxes();
 
         var sourceElem = sourceBox.querySelector('[data-lock="true"]');
         var startRect = sourceElem ? sourceElem.getBoundingClientRect() : null;
 
-        // 2. Remove locked word from source pool and place it in target box
         available.pop();
         selected = [lockedItem];
         renderBoxes();
 
-        // 3. Animate locked word from source position to target box
         var targetElem = targetBox.querySelector('[data-lock="true"]');
 
         if (sourceElem && targetElem && startRect) {
@@ -309,22 +309,22 @@
           targetElem.style.setProperty('--dx', dx + 'px');
           targetElem.style.setProperty('--dy', dy + 'px');
           targetElem.style.translate = dx + 'px ' + dy + 'px';
+          targetElem.style.pointerEvents = 'none';
 
           targetElem.offsetHeight;
 
-          // 400ms delay before starting synchronized animations
           setTimeout(function() {
             targetElem.classList.add('locked-chip');
             targetElem.style.animation = 'glide 0.75s ease-in-out forwards, pop 0.75s ease-in-out forwards';
           }, 400);
 
-          // Reset inline styles after 1000ms total
           setTimeout(function() {
             if (targetElem) {
               targetElem.style.animation = '';
               targetElem.style.translate = '';
               targetElem.style.removeProperty('--dx');
               targetElem.style.removeProperty('--dy');
+              targetElem.style.pointerEvents = '';
             }
           }, 1100);
         }
