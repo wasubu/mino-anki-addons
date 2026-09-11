@@ -1,4 +1,4 @@
-<!-- back.html - do not delete this line nor modify. v10.3 -->
+<!-- back.html - do not delete this line nor modify. v10.4 -->
 <div id="anki-back-flag" style="display:none;"></div>
 
 {{FrontSide}}
@@ -6,6 +6,7 @@
 <div id="back-result"></div>
 
 <style>
+  /* back.html - do not delete this line nor modify. */
   /* High-specificity overrides for back-card chip feedback */
   .shuffle-container .word-chip.chip-match {
     background: #e8f5e9 !important;
@@ -29,6 +30,23 @@
     color: #b78103 !important;
     border: 1px solid #ffe082 !important;
     font-weight: 600;
+  }
+
+  /* Ultra-high specificity override: Solid blue fill, white text, no glow, no strike-through */
+  .shuffle-container .word-chip.timing-active,
+  .shuffle-container .word-chip.timing-active:hover,
+  .shuffle-container .word-chip.timing-active:active,
+  .nightMode .shuffle-container .word-chip.timing-active,
+  .nightMode .shuffle-container .word-chip.timing-active:hover {
+    background: #1976d2 !important;
+    background-color: #1976d2 !important;
+    color: #ffffff !important;
+    border: 1px solid #1565c0 !important;
+    box-shadow: none !important;
+    text-decoration: none !important;
+    transform: scale(1.08) !important;
+    opacity: 1 !important;
+    z-index: 10 !important;
   }
 
   /* Shared Button Base Styles */
@@ -77,10 +95,12 @@
 </style>
 
 <script>
+// back.html - do not delete this line nor modify.
 (function initBackCard() {
   var targetBox = document.getElementById("target-box");
   var sourceBox = document.getElementById("source-box");
   var sentenceElem = document.getElementById("hidden-sentence");
+  var timingElem = document.getElementById("hidden-timing");
   var badge = document.getElementById("feedback-badge");
   var backResult = document.getElementById("back-result");
   var shuffleContainer = document.querySelector(".shuffle-container");
@@ -108,6 +128,18 @@
 
   var correctWords = correctText.split(/\s+/).filter(Boolean);
   var userWords = userText ? userText.split(/\s+/).filter(Boolean) : [];
+
+  // Parse timing timestamps for Back Card sync
+  var timingRaw = timingElem ? timingElem.innerText.trim() : '';
+  var intervals = timingRaw ? timingRaw.split(',').map(function(s) { return parseFloat(s.trim()) || 0; }) : [];
+  var wordTimestamps = [];
+  if (intervals.length > 0) {
+    var cumulativeMs = 0;
+    for (var t = 0; t < intervals.length; t++) {
+      cumulativeMs += intervals[t];
+      wordTimestamps.push(cumulativeMs / 1000.0);
+    }
+  }
 
   function normalize(w) {
     return (w || '').toLowerCase().replace(/[^\w]/g, '');
@@ -147,6 +179,117 @@
     }
   }
 
+  // --- Dual-Box Timing Sync Engine ---
+  var animFrameId = null;
+  var isShowingRightAnswer = false;
+
+  function syncBackTiming() {
+    var vid = document.getElementById('card-video');
+    if (!vid || wordTimestamps.length === 0) return;
+
+    var currentTime = vid.currentTime;
+    var activeIdx = -1;
+
+    for (var i = wordTimestamps.length - 1; i >= 0; i--) {
+      if (currentTime >= wordTimestamps[i]) {
+        var nextTime = (i < wordTimestamps.length - 1) ? wordTimestamps[i + 1] : (wordTimestamps[i] + 0.6);
+        if (currentTime < nextTime) {
+          activeIdx = i;
+        }
+        break;
+      }
+    }
+
+    var allChips = document.querySelectorAll('.shuffle-container .word-chip');
+    allChips.forEach(function(c) { c.classList.remove('timing-active'); });
+
+    if (activeIdx < 0 || activeIdx >= correctWords.length) return;
+
+    var activeWordNorm = normalize(correctWords[activeIdx]);
+
+    if (isCorrect || isShowingRightAnswer) {
+      var targetChips = targetBox.querySelectorAll('.word-chip');
+      if (targetChips[activeIdx]) {
+        targetChips[activeIdx].classList.add('timing-active');
+      }
+    } else {
+      var targetChips = Array.from(targetBox.querySelectorAll('.word-chip'));
+      var sourceChips = sourceBox ? Array.from(sourceBox.querySelectorAll('.word-chip')) : [];
+
+      var highlighted = false;
+
+      // 1. Try exact slot in input area first
+      if (targetChips[activeIdx] && normalize(targetChips[activeIdx].innerText) === activeWordNorm) {
+        targetChips[activeIdx].classList.add('timing-active');
+        highlighted = true;
+      }
+
+      // 2. Search input area for the matching word
+      if (!highlighted) {
+        for (var t = 0; t < targetChips.length; t++) {
+          if (normalize(targetChips[t].innerText) === activeWordNorm) {
+            targetChips[t].classList.add('timing-active');
+            highlighted = true;
+            break;
+          }
+        }
+      }
+
+      // 3. Search wordbank (source box) for the matching word
+      if (!highlighted) {
+        for (var s = 0; s < sourceChips.length; s++) {
+          if (normalize(sourceChips[s].innerText) === activeWordNorm) {
+            sourceChips[s].classList.add('timing-active');
+            highlighted = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  window.initTimingSync = function() {
+    var vid = document.getElementById('card-video');
+    if (!vid || wordTimestamps.length === 0) return;
+
+    function tick() {
+      syncBackTiming();
+      if (!vid.paused && !vid.ended) {
+        animFrameId = requestAnimationFrame(tick);
+      }
+    }
+
+    function onPlay() {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      animFrameId = requestAnimationFrame(tick);
+    }
+
+    function onPause() {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      syncBackTiming();
+    }
+
+    function onEnded() {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      var allChips = document.querySelectorAll('.shuffle-container .word-chip');
+      allChips.forEach(function(c) { c.classList.remove('timing-active'); });
+    }
+
+    vid.removeEventListener('play', onPlay);
+    vid.removeEventListener('pause', onPause);
+    vid.removeEventListener('ended', onEnded);
+    vid.removeEventListener('seeked', syncBackTiming);
+
+    vid.addEventListener('play', onPlay);
+    vid.addEventListener('pause', onPause);
+    vid.addEventListener('ended', onEnded);
+    vid.addEventListener('seeked', syncBackTiming);
+
+    if (!vid.paused && !vid.ended) {
+      tick();
+    }
+  };
+
   // --- 1. CORRECT ATTEMPT ---
   if (isCorrect) {
     if (badge) {
@@ -163,7 +306,7 @@
       targetBox.appendChild(chip);
     });
 
-    if (typeof window.initTimingSync === 'function') window.initTimingSync();
+    window.initTimingSync();
     if (typeof window.replayVideo === 'function') window.replayVideo();
 
     setTimeout(function() {
@@ -206,15 +349,13 @@
     });
   }
 
-  if (typeof window.initTimingSync === 'function') window.initTimingSync();
+  window.initTimingSync();
 
   if (backResult) {
     backResult.innerHTML = '<button id="btn-show-answer" class="btn-show-answer green-state">See the right answer</button>';
     var btn = document.getElementById("btn-show-answer");
     if (btn) btn.onclick = toggleAnswer;
   }
-
-  var isShowingRightAnswer = false;
 
   function toggleAnswer() {
     var btn = document.getElementById("btn-show-answer");
@@ -275,7 +416,7 @@
         }
         isShowingRightAnswer = true;
 
-        if (typeof window.initTimingSync === 'function') window.initTimingSync();
+        window.initTimingSync();
         if (typeof window.replayVideo === 'function') window.replayVideo();
       });
 
@@ -321,7 +462,7 @@
           btn.disabled = false;
         }
         isShowingRightAnswer = false;
-        if (typeof window.initTimingSync === 'function') window.initTimingSync();
+        window.initTimingSync();
       });
     }
   }
