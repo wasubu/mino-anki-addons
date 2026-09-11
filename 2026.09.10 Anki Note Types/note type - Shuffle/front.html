@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v9.5 -->
+<!-- front.html - do not delete this line nor modify. v9.6 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -283,30 +283,30 @@
         var targetElem = targetBox.querySelector('[data-lock="true"]');
 
         if (sourceElem && targetElem && startRect) {
-          var endRect = targetElem.getBoundingClientRect();
-          var dx = startRect.left - endRect.left;
-          var dy = startRect.top - endRect.top;
+            var endRect = targetElem.getBoundingClientRect();
+            var dx = startRect.left - endRect.left;
+            var dy = startRect.top - endRect.top;
 
-          targetElem.classList.remove('locked-chip');
-          targetElem.style.transition = 'none';
-          targetElem.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+                targetElem.classList.remove('locked-chip');
+                targetElem.style.transition = 'none';
+                targetElem.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
 
-          targetElem.offsetHeight;
+                targetElem.offsetHeight;
 
-          // 500ms delay before animating to target position
-          setTimeout(function() {
-            targetElem.classList.add('locked-chip');
-            targetElem.style.transition = 'transform 0.6s ease-in-out, background-color 0.6s ease-in-out, border-color 0.6s ease-in-out, color 0.6s ease-in-out';
-            targetElem.style.transform = 'translate(0, 0)';
-          }, 500);
+                // 400ms delay before animating to target position
+                setTimeout(function() {
+                    targetElem.classList.add('locked-chip');
+                    targetElem.style.transition = 'transform 0.3s ease-in-out, background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, color 0.5s ease-in-out';
+                    targetElem.style.transform = 'translate(0, 0)';
+                }, 400);
 
-          // Reset inline styles after 1150ms total (500ms delay + 650ms animation)
-          setTimeout(function() {
-            if (targetElem) {
-              targetElem.style.transition = '';
-              targetElem.style.transform = '';
-            }
-          }, 1150);
+                // Reset inline styles after total duration (400ms delay + 550ms animation + buffer)
+                    setTimeout(function() {
+                    if (targetElem) {
+                    targetElem.style.transition = '';
+                    targetElem.style.transform = '';
+                    }
+                }, 1000);
         }
 
         hasAnimatedLock = true;
