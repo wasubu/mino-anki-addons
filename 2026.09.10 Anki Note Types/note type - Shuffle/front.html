@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v10 -->
+<!-- front.html - do not delete this line nor modify. v10.1 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -80,7 +80,7 @@
     scale: 1;
   }
   50% {
-    scale: 1.4;
+    scale: 1.8;
   }
 }
 </style>
@@ -315,7 +315,7 @@
           // 400ms delay before starting synchronized animations
           setTimeout(function() {
             targetElem.classList.add('locked-chip');
-            targetElem.style.animation = 'glide 0.55s ease-in-out forwards, pop 0.55s ease-in-out forwards';
+            targetElem.style.animation = 'glide 0.75s ease-in-out forwards, pop 0.75s ease-in-out forwards';
           }, 400);
 
           // Reset inline styles after 1000ms total
@@ -326,7 +326,7 @@
               targetElem.style.removeProperty('--dx');
               targetElem.style.removeProperty('--dy');
             }
-          }, 1000);
+          }, 1100);
         }
 
         hasAnimatedLock = true;
