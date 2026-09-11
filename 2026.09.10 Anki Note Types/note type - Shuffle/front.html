@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v9 -->
+<!-- front.html - do not delete this line nor modify. v9.1 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -39,6 +39,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  .shuffle-container .word-chip.locked-chip {
+    cursor: not-allowed;
+    user-select: none;
+    opacity: 0.9;
+    border: 1.5px dashed #66bb6a !important;
   }
 </style>
 
@@ -107,6 +113,8 @@
   if (!originalText) return;
 
   var originalWords = originalText.split(/\s+/).filter(Boolean);
+  var isLongSentence = originalWords.length >= 6;
+  var numDummies = originalWords.length <= 5 ? 2 : 1;
 
   function normalize(w) {
     return (w || '').toLowerCase().replace(/[^\w]/g, '');
@@ -138,18 +146,29 @@
     return arr;
   }
 
-  function startWithDummy(dummyWord) {
-    var fullWordList = originalWords.slice();
-    if (dummyWord) {
-      fullWordList.push(dummyWord);
+  function pickDummies(candidates, count) {
+    var validList = filterValidDummies(candidates);
+    var shuffled = shuffle(validList);
+    return shuffled.slice(0, count);
+  }
+
+  function startWithDummies(dummyWords) {
+    var lockedItem = null;
+    var movableWords = [];
+
+    if (isLongSentence) {
+      lockedItem = { id: 0, text: originalWords[0], locked: true };
+      movableWords = originalWords.slice(1);
+    } else {
+      movableWords = originalWords.slice();
     }
 
-    var pool = fullWordList.map(function(w, i) {
-      return { id: i, text: w };
+    var fullPool = movableWords.concat(dummyWords).map(function(w, i) {
+      return { id: i + 1, text: w };
     });
 
-    var available = shuffle(pool);
-    var selected = [];
+    var available = shuffle(fullPool);
+    var selected = lockedItem ? [lockedItem] : [];
     var draggedData = null;
 
     var placeholder = document.createElement('div');
@@ -162,7 +181,7 @@
     }
 
     function getDragAfterElement(container, x, y) {
-      var chips = Array.from(container.querySelectorAll('.word-chip:not(.dragging)'));
+      var chips = Array.from(container.querySelectorAll('.word-chip:not(.dragging):not(.locked-chip)'));
       for (var i = 0; i < chips.length; i++) {
         var box = chips[i].getBoundingClientRect();
         var boxCenter = box.left + box.width / 2;
@@ -219,6 +238,15 @@
     function createChip(item, location, index) {
       var chip = document.createElement('div');
       chip.setAttribute('role', 'button');
+
+      if (item.locked) {
+        chip.className = 'word-chip active-chip locked-chip';
+        chip.innerText = item.text;
+        chip.draggable = false;
+        chip.onclick = function(e) { e.stopPropagation(); };
+        return chip;
+      }
+
       chip.className = 'word-chip' + (location === 'target' ? ' active-chip' : '');
       chip.innerText = item.text;
       chip.draggable = true;
@@ -281,6 +309,10 @@
         var insertIndex = children.indexOf(placeholder);
         if (insertIndex === -1) insertIndex = selected.length;
 
+        if (isLongSentence) {
+          insertIndex = Math.max(1, insertIndex);
+        }
+
         if (draggedData.location === 'source') {
           available.splice(draggedData.index, 1);
         } else {
@@ -299,7 +331,7 @@
 
       sourceBox.ondrop = function(e) {
         e.preventDefault();
-        if (!draggedData) return;
+        if (!draggedData || draggedData.item.locked) return;
         if (draggedData.location === 'target') {
           selected.splice(draggedData.index, 1);
           available.push(draggedData.item);
@@ -309,8 +341,8 @@
     }
 
     window.resetShuffle = function() {
-      available = shuffle(pool);
-      selected = [];
+      available = shuffle(fullPool);
+      selected = lockedItem ? [lockedItem] : [];
       render();
     };
 
@@ -319,9 +351,8 @@
 
   if (dummyRaw.includes(',')) {
     var rawList = dummyRaw.split(',');
-    var validList = filterValidDummies(rawList);
-    var picked = validList.length > 0 ? validList[Math.floor(Math.random() * validList.length)].trim() : null;
-    startWithDummy(picked);
+    var picked = pickDummies(rawList, numDummies);
+    startWithDummies(picked);
   } else {
     fetch('_dummyWords.json')
       .then(function(res) {
@@ -331,10 +362,9 @@
       .then(function(json) {
         var candidates = json[dummyRaw];
         if (Array.isArray(candidates)) {
-          var validList = filterValidDummies(candidates);
-          if (validList.length > 0) {
-            var picked = validList[Math.floor(Math.random() * validList.length)].trim();
-            startWithDummy(picked);
+          var picked = pickDummies(candidates, numDummies);
+          if (picked.length > 0) {
+            startWithDummies(picked);
             return;
           }
         }
@@ -345,9 +375,8 @@
       });
 
     function fallbackSingle() {
-      var validList = filterValidDummies([dummyRaw]);
-      var picked = validList.length > 0 ? validList[0].trim() : null;
-      startWithDummy(picked);
+      var picked = pickDummies([dummyRaw], numDummies);
+      startWithDummies(picked);
     }
   }
 })();
