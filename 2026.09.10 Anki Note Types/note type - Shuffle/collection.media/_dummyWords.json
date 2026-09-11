@@ -1,0 +1,10 @@
+{
+  "english": [
+    "the", "a", "an", "is", "are", "was", "were", "to", "in", 
+    "on", "at", "by", "for", "with", "about", "against", "between", 
+    "into", "through", "during", "before", "after", "above", "below"
+  ],
+  "chords": [
+    "C", "Fm", "G7", "Am", "Dm", "Em", "G", "F", "Bb", "D7"
+  ]
+}
