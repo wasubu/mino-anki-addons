@@ -1,0 +1,363 @@
+<!-- back.html - do not delete this line nor modify. v8 -->
+<div id="anki-back-flag" style="display:none;"></div>
+
+{{FrontSide}}
+
+<div id="back-result"></div>
+
+<style>
+  /* High-specificity overrides for back-card chip feedback */
+  .shuffle-container .word-chip.chip-match {
+    background: #e8f5e9 !important;
+    color: #2e7d32 !important;
+    border: 1px solid #a5d6a7 !important;
+  }
+  .shuffle-container .word-chip.chip-mismatch {
+    background: #ffebee !important;
+    color: #c62828 !important;
+    border: 1px solid #ef9a9a !important;
+    text-decoration: line-through;
+  }
+  .shuffle-container .word-chip.chip-missing {
+    background: #fff8e1 !important;
+    color: #b78103 !important;
+    border: 1px solid #ffe082 !important;
+    font-weight: 600;
+  }
+
+  /* Shared Button Base Styles */
+  .shuffle-container .btn-show-answer {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 12px 0 6px 0;
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Default State: Light Green ("See the right answer") */
+  .shuffle-container .btn-show-answer.green-state {
+    background: #e8f5e9 !important;
+    color: #2e7d32 !important;
+    border: 2px solid #2e7d32 !important;
+  }
+  .shuffle-container .btn-show-answer.green-state:hover {
+    background: #c8e6c9 !important;
+  }
+
+  /* Toggled State: Light Blue ("See your answer") */
+  .shuffle-container .btn-show-answer.blue-state {
+    background: #e3f2fd !important;
+    color: #1976d2 !important;
+    border: 2px solid #1976d2 !important;
+  }
+  .shuffle-container .btn-show-answer.blue-state:hover {
+    background: #bbdefb !important;
+  }
+
+  .shuffle-container .btn-show-answer:active {
+    transform: scale(0.98);
+  }
+  .shuffle-container .btn-show-answer:disabled {
+    opacity: 0.5;
+    cursor: default;
+    transform: none;
+  }
+</style>
+
+<script>
+(function initBackCard() {
+  var targetBox = document.getElementById("target-box");
+  var sourceBox = document.getElementById("source-box");
+  var sentenceElem = document.getElementById("hidden-sentence");
+  var badge = document.getElementById("feedback-badge");
+  var backResult = document.getElementById("back-result");
+  var shuffleContainer = document.querySelector(".shuffle-container");
+
+  if (!sentenceElem || !targetBox) return;
+
+  if (backResult && shuffleContainer) {
+    shuffleContainer.appendChild(backResult);
+  }
+
+  var controls = document.querySelector(".controls");
+  if (controls) controls.style.display = "none";
+
+  var savedState = {};
+  try {
+    var raw = localStorage.getItem("anki_shuffle_state") || window.name;
+    if (raw) savedState = JSON.parse(raw);
+  } catch(e) {}
+
+  var correctText = sentenceElem.innerText.trim();
+  var isSameCard = (savedState.sentence && savedState.sentence.trim() === correctText);
+  var userText = isSameCard ? (savedState.userText || "") : "";
+  var unusedWords = isSameCard ? (savedState.unusedWords || []) : [];
+  var isCorrect = isSameCard ? (savedState.isCorrect === true) : false;
+
+  var correctWords = correctText.split(/\s+/).filter(Boolean);
+  var userWords = userText ? userText.split(/\s+/).filter(Boolean) : [];
+
+  // Track required word counts to differentiate essential left-out words vs dummy words
+  var reqCounts = {};
+  correctWords.forEach(function(w) {
+    var key = w.toLowerCase();
+    reqCounts[key] = (reqCounts[key] || 0) + 1;
+  });
+
+  userWords.forEach(function(w) {
+    var key = w.toLowerCase();
+    if (reqCounts[key] && reqCounts[key] > 0) reqCounts[key]--;
+  });
+
+  // Render unused words in Word Bank (Keep box visible even when empty)
+  if (sourceBox) {
+    sourceBox.innerHTML = "";
+    sourceBox.style.display = "flex";
+    if (unusedWords.length > 0) {
+      unusedWords.forEach(function(word, idx) {
+        var key = word.toLowerCase();
+        var chip = document.createElement("div");
+        if (reqCounts[key] && reqCounts[key] > 0) {
+          chip.className = "word-chip chip-missing"; // Essential left-out word (Yellow)
+          reqCounts[key]--;
+        } else {
+          chip.className = "word-chip"; // Dummy word (Original Blue)
+        }
+        chip.innerText = word;
+        chip.dataset.initialBox = "source";
+        chip.dataset.initialIdx = idx;
+        sourceBox.appendChild(chip);
+      });
+    }
+  }
+
+  // --- 1. CORRECT ATTEMPT ---
+  if (isCorrect) {
+    if (badge) {
+      badge.innerText = "✓ Correct";
+      badge.className = "feedback-badge correct-badge";
+    }
+
+    targetBox.classList.add('correct');
+    targetBox.innerHTML = "";
+    userWords.forEach(function(word) {
+      var chip = document.createElement("div");
+      chip.className = "word-chip active-chip chip-match";
+      chip.innerText = word;
+      targetBox.appendChild(chip);
+    });
+
+    if (typeof window.replayVideo === 'function') window.replayVideo();
+
+    setTimeout(function() {
+      if (typeof pycmd !== "undefined") {
+        pycmd("mino_rate_good");
+        //pycmd("ease3");
+      } else if (typeof AnkiDroidJS !== "undefined") {
+        AnkiDroidJS.answerCard(3);
+      }
+    }, 150);
+    return;
+  }
+
+  // --- 2. INCORRECT ATTEMPT ---
+  if (badge) {
+    badge.innerText = "✕ Incorrect";
+    badge.className = "feedback-badge incorrect-badge";
+  }
+
+  targetBox.innerHTML = "";
+  if (userWords.length === 0) {
+    targetBox.innerHTML = '<span class="placeholder" style="color: #c62828;">No words selected</span>';
+  } else {
+    userWords.forEach(function(word, idx) {
+      var isMatch = correctWords[idx] && correctWords[idx].toLowerCase() === word.toLowerCase();
+      var chip = document.createElement("div");
+      chip.className = "word-chip active-chip " + (isMatch ? "chip-match" : "chip-mismatch");
+      chip.innerText = word;
+      chip.dataset.initialBox = "target";
+      chip.dataset.initialIdx = idx;
+      targetBox.appendChild(chip);
+    });
+  }
+
+  // Create Toggle Button
+  if (backResult) {
+    backResult.innerHTML = '<button id="btn-show-answer" class="btn-show-answer green-state">See the right answer</button>';
+    var btn = document.getElementById("btn-show-answer");
+    if (btn) btn.onclick = toggleAnswer;
+  }
+
+  var isShowingRightAnswer = false;
+
+  function toggleAnswer() {
+    var btn = document.getElementById("btn-show-answer");
+    if (btn) btn.disabled = true;
+
+    var allChips = Array.from(document.querySelectorAll('.word-chip'));
+
+    // 1. FIRST: Record initial positions
+    var firstPositions = new Map();
+    allChips.forEach(function(chip) {
+      firstPositions.set(chip, chip.getBoundingClientRect());
+    });
+
+    var placeholder = targetBox.querySelector('.placeholder');
+
+    if (!isShowingRightAnswer) {
+      // === SHOW RIGHT ANSWER ===
+      if (placeholder) placeholder.style.display = 'none';
+
+      var pool = allChips.slice();
+      var targetChips = [];
+
+      correctWords.forEach(function(word) {
+        var wLower = word.toLowerCase();
+        var idx = pool.findIndex(function(c) {
+          return c.innerText.trim().toLowerCase() === wLower;
+        });
+
+        if (idx !== -1) {
+          targetChips.push(pool.splice(idx, 1)[0]);
+        } else {
+          var newChip = document.createElement("div");
+          newChip.className = "word-chip chip-missing";
+          newChip.innerText = word;
+          targetChips.push(newChip);
+        }
+      });
+
+      var sourceChips = pool;
+      var activeAllChips = targetChips.concat(sourceChips);
+
+      // Remove strikethrough while showing the right sentence
+      activeAllChips.forEach(function(c) {
+        c.style.textDecoration = 'none';
+      });
+
+      targetBox.innerHTML = "";
+      targetChips.forEach(function(c) { targetBox.appendChild(c); });
+
+      if (sourceBox) {
+        sourceBox.style.display = "flex";
+        sourceBox.innerHTML = "";
+        sourceChips.forEach(function(c) { sourceBox.appendChild(c); });
+      }
+
+      animateChips(activeAllChips, firstPositions, function() {
+        if (btn) {
+          btn.innerText = "See your answer";
+          btn.className = "btn-show-answer blue-state";
+          btn.disabled = false;
+        }
+        isShowingRightAnswer = true;
+
+        if (typeof window.replayVideo === 'function') {
+          window.replayVideo();
+        } else {
+          var vid = document.getElementById('card-video');
+          if (vid) {
+            vid.currentTime = 0;
+            vid.muted = false;
+            vid.play();
+          }
+        }
+      });
+
+    } else {
+      // === REVERT TO YOUR ANSWER ===
+      // Restore strikethrough for user's mismatched words
+      allChips.forEach(function(c) {
+        c.style.textDecoration = '';
+      });
+
+      var targetChips = allChips.filter(function(c) {
+        return c.dataset.initialBox === "target";
+      }).sort(function(a, b) {
+        return parseInt(a.dataset.initialIdx) - parseInt(b.dataset.initialIdx);
+      });
+
+      var sourceChips = allChips.filter(function(c) {
+        return c.dataset.initialBox === "source";
+      }).sort(function(a, b) {
+        return parseInt(a.dataset.initialIdx) - parseInt(b.dataset.initialIdx);
+      });
+
+      targetBox.innerHTML = "";
+      if (targetChips.length === 0) {
+        if (placeholder) {
+          placeholder.style.display = 'block';
+          targetBox.appendChild(placeholder);
+        } else {
+          targetBox.innerHTML = '<span class="placeholder" style="color: #c62828;">No words selected</span>';
+        }
+      } else {
+        targetChips.forEach(function(c) { targetBox.appendChild(c); });
+      }
+
+      if (sourceBox) {
+        sourceBox.style.display = "flex";
+        sourceBox.innerHTML = "";
+        sourceChips.forEach(function(c) { sourceBox.appendChild(c); });
+      }
+
+      animateChips(allChips, firstPositions, function() {
+        if (btn) {
+          btn.innerText = "See the right answer";
+          btn.className = "btn-show-answer green-state";
+          btn.disabled = false;
+        }
+        isShowingRightAnswer = false;
+      });
+    }
+  }
+
+  // Smooth FLIP animation helper
+  function animateChips(allChips, firstPositions, onComplete) {
+    // 2. INVERT: Calculate position deltas
+    allChips.forEach(function(chip) {
+      var first = firstPositions.get(chip);
+      if (first) {
+        var last = chip.getBoundingClientRect();
+        var deltaX = first.left - last.left;
+        var deltaY = first.top - last.top;
+
+        chip.style.transition = 'none';
+        chip.style.transform = 'translate(' + deltaX + 'px, ' + deltaY + 'px)';
+      }
+    });
+
+    // Force reflow
+    document.body.offsetHeight;
+
+    // 3. PLAY: Speed settings
+    var animDuration = 800; // Slide duration (ms)
+    var maxDelay = 350;     // Stagger delay cap (ms)
+
+    allChips.forEach(function(chip, idx) {
+      var first = firstPositions.get(chip);
+      if (first) {
+        var delay = Math.min(idx * 45, maxDelay);
+        chip.style.transition = 'transform ' + animDuration + 'ms cubic-bezier(0.4, 0, 0.2, 1) ' + delay + 'ms';
+        chip.style.transform = 'translate(0, 0)';
+      }
+    });
+
+    // 4. CLEANUP
+    var totalTime = animDuration + Math.min(allChips.length * 45, maxDelay) + 50;
+    setTimeout(function() {
+      allChips.forEach(function(chip) {
+        chip.style.transition = '';
+        chip.style.transform = '';
+      });
+      if (onComplete) onComplete();
+    }, totalTime);
+  }
+})();
+</script>
