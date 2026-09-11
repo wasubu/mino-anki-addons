@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v9.3 -->
+<!-- front.html - do not delete this line nor modify. v9.4 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -50,6 +50,21 @@
   .shuffle-container .word-chip.locked-chip:hover {
     background-color: #d1f2eb !important;
   }
+  .target-box .placeholder-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed #b0bec5;
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: #78909c;
+    font-size: 0.85em;
+    background-color: rgba(236, 239, 241, 0.4);
+    user-select: none;
+    pointer-events: none;
+    margin: 3px;
+    line-height: 1.2;
+  }
 </style>
 
 <div class="shuffle-container {{#Video}}has-video{{/Video}}">
@@ -77,7 +92,7 @@
   </div>
 
   <div id="target-box" class="word-box target-box">
-    <span class="placeholder">Tap or drag words here...</span>
+    <div class="placeholder-box">Tap or drag words here...</div>
   </div>
 
   <div id="source-box" class="word-box source-box"></div>
@@ -161,8 +176,9 @@
     var movableWords = [];
 
     if (isLongSentence) {
-      lockedItem = { id: 'lock-0', text: originalWords[0], locked: true };
-      movableWords = originalWords.slice(1);
+      var lastIdx = originalWords.length - 1;
+      lockedItem = { id: 'lock-last', text: originalWords[lastIdx], locked: true };
+      movableWords = originalWords.slice(0, lastIdx);
     } else {
       movableWords = originalWords.slice();
     }
@@ -224,13 +240,18 @@
       targetBox.innerHTML = '';
       sourceBox.innerHTML = '';
 
-      if (selected.length === 0) {
-        targetBox.innerHTML = '<span class="placeholder">Tap or drag words here...</span>';
-      } else {
-        selected.forEach(function(item, index) {
-          targetBox.appendChild(createChip(item, 'target', index));
-        });
+      var userWordsCount = selected.filter(function(i) { return !i.locked; }).length;
+
+      if (userWordsCount === 0) {
+        var phBox = document.createElement('div');
+        phBox.className = 'placeholder-box';
+        phBox.innerText = 'Tap or drag words here...';
+        targetBox.appendChild(phBox);
       }
+
+      selected.forEach(function(item, index) {
+        targetBox.appendChild(createChip(item, 'target', index));
+      });
 
       available.forEach(function(item, index) {
         sourceBox.appendChild(createChip(item, 'source', index));
@@ -313,7 +334,11 @@
           available.push(item);
         } else {
           available.splice(index, 1);
-          selected.push(item);
+          if (isLongSentence) {
+            selected.splice(selected.length - 1, 0, item);
+          } else {
+            selected.push(item);
+          }
         }
         render();
       };
@@ -338,11 +363,16 @@
       targetBox.ondragover = function(e) {
         e.preventDefault();
         if (!draggedData) return;
-        var placeholderSpan = targetBox.querySelector('.placeholder');
-        if (placeholderSpan) placeholderSpan.style.display = 'none';
+        var phBox = targetBox.querySelector('.placeholder-box');
+        if (phBox) phBox.style.display = 'none';
+        
         var afterElement = getDragAfterElement(targetBox, e.clientX, e.clientY);
+        var lockedElem = targetBox.querySelector('.locked-chip');
+
         if (afterElement) {
           targetBox.insertBefore(placeholder, afterElement);
+        } else if (lockedElem) {
+          targetBox.insertBefore(placeholder, lockedElem);
         } else {
           targetBox.appendChild(placeholder);
         }
@@ -351,9 +381,10 @@
       targetBox.ondragleave = function(e) {
         if (e.target === targetBox && !targetBox.contains(e.relatedTarget)) {
           removePlaceholder();
-          var placeholderSpan = targetBox.querySelector('.placeholder');
-          if (placeholderSpan && selected.length === 0) {
-            placeholderSpan.style.display = 'block';
+          var phBox = targetBox.querySelector('.placeholder-box');
+          var userWordsCount = selected.filter(function(i) { return !i.locked; }).length;
+          if (phBox && userWordsCount === 0) {
+            phBox.style.display = 'inline-flex';
           }
         }
       };
@@ -365,17 +396,20 @@
         var insertIndex = children.indexOf(placeholder);
         if (insertIndex === -1) insertIndex = selected.length;
 
-        if (isLongSentence) {
-          insertIndex = Math.max(1, insertIndex);
-        }
-
         if (draggedData.location === 'source') {
           available.splice(draggedData.index, 1);
+          if (isLongSentence) {
+            insertIndex = Math.min(insertIndex, selected.length - 1);
+          }
         } else {
           selected.splice(draggedData.index, 1);
           if (draggedData.index < insertIndex) insertIndex--;
+          if (isLongSentence) {
+            insertIndex = Math.min(insertIndex, selected.length - 1);
+          }
         }
 
+        insertIndex = Math.max(0, insertIndex);
         selected.splice(insertIndex, 0, draggedData.item);
         render();
       };
