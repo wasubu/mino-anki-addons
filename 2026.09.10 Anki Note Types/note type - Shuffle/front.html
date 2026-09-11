@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v8 -->
+<!-- front.html - do not delete this line nor modify. v9 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -73,6 +73,7 @@
   <div id="source-box" class="word-box source-box"></div>
 
   <div id="hidden-sentence" style="display:none;">{{Sentence}}</div>
+  <div id="hidden-dummy" style="display:none;">{{dummy}}</div>
 
   <div class="controls">
     <div class="btn-reset" role="button" onclick="resetShuffle()">↺ Reset</div>
@@ -106,10 +107,25 @@
   if (!originalText) return;
 
   var originalWords = originalText.split(/\s+/).filter(Boolean);
-  
-  var pool = originalWords.map(function(w, i) {
-    return { id: i, text: w };
-  });
+
+  function normalize(w) {
+    return (w || '').toLowerCase().replace(/[^\w]/g, '');
+  }
+
+  var originalNormSet = new Set(originalWords.map(normalize));
+
+  var dummyElem = document.getElementById('hidden-dummy');
+  var dummyRaw = (dummyElem ? dummyElem.innerText.trim() : '');
+  if (!dummyRaw) {
+    dummyRaw = 'english';
+  }
+
+  function filterValidDummies(list) {
+    return list.filter(function(cand) {
+      var trimmed = cand.trim();
+      return trimmed.length > 0 && !originalNormSet.has(normalize(trimmed));
+    });
+  }
 
   function shuffle(array) {
     var arr = array.slice();
@@ -122,173 +138,217 @@
     return arr;
   }
 
-  var available = shuffle(pool);
-  var selected = [];
-  var draggedData = null;
-
-  var placeholder = document.createElement('div');
-  placeholder.className = 'chip-placeholder';
-
-  function removePlaceholder() {
-    if (placeholder.parentNode) {
-      placeholder.parentNode.removeChild(placeholder);
-    }
-  }
-
-  function getDragAfterElement(container, x, y) {
-    var chips = Array.from(container.querySelectorAll('.word-chip:not(.dragging)'));
-    for (var i = 0; i < chips.length; i++) {
-      var box = chips[i].getBoundingClientRect();
-      var boxCenter = box.left + box.width / 2;
-      if (y < box.bottom && (y < box.top || x < boxCenter)) {
-        return chips[i];
-      }
-    }
-    return null;
-  }
-
-  function saveState() {
-    var userText = selected.map(function(i) { return i.text; }).join(' ');
-    var unusedWords = available.map(function(i) { return i.text; });
-    var isCorrect = (available.length === 0 && userText === originalWords.join(' '));
-    var payload = JSON.stringify({
-      sentence: originalText,
-      userText: userText,
-      unusedWords: unusedWords,
-      isCorrect: isCorrect
-    });
-    try {
-      localStorage.setItem("anki_shuffle_state", payload);
-    } catch(e) {}
-    try {
-      window.name = payload;
-    } catch(e) {}
-  }
-
-  function render() {
-    removePlaceholder();
-    var targetBox = document.getElementById('target-box');
-    var sourceBox = document.getElementById('source-box');
-    if (!targetBox || !sourceBox) return;
-
-    targetBox.innerHTML = '';
-    sourceBox.innerHTML = '';
-
-    if (selected.length === 0) {
-      targetBox.innerHTML = '<span class="placeholder">Tap or drag words here...</span>';
-    } else {
-      selected.forEach(function(item, index) {
-        targetBox.appendChild(createChip(item, 'target', index));
-      });
+  function startWithDummy(dummyWord) {
+    var fullWordList = originalWords.slice();
+    if (dummyWord) {
+      fullWordList.push(dummyWord);
     }
 
-    available.forEach(function(item, index) {
-      sourceBox.appendChild(createChip(item, 'source', index));
+    var pool = fullWordList.map(function(w, i) {
+      return { id: i, text: w };
     });
 
-    saveState();
-    setupBoxEvents(targetBox, sourceBox);
-  }
+    var available = shuffle(pool);
+    var selected = [];
+    var draggedData = null;
 
-  function createChip(item, location, index) {
-    var chip = document.createElement('div');
-    chip.setAttribute('role', 'button');
-    chip.className = 'word-chip' + (location === 'target' ? ' active-chip' : '');
-    chip.innerText = item.text;
-    chip.draggable = true;
+    var placeholder = document.createElement('div');
+    placeholder.className = 'chip-placeholder';
 
-    chip.onclick = function() {
-      if (location === 'target') {
-        selected.splice(index, 1);
-        available.push(item);
-      } else {
-        available.splice(index, 1);
-        selected.push(item);
+    function removePlaceholder() {
+      if (placeholder.parentNode) {
+        placeholder.parentNode.removeChild(placeholder);
       }
-      render();
-    };
+    }
 
-    chip.addEventListener('dragstart', function(e) {
-      draggedData = { item: item, location: location, index: index };
-      chip.classList.add('dragging');
-      placeholder.style.width = chip.offsetWidth + 'px';
-      e.dataTransfer.effectAllowed = 'move';
-    });
-
-    chip.addEventListener('dragend', function() {
-      chip.classList.remove('dragging');
-      removePlaceholder();
-      draggedData = null;
-    });
-
-    return chip;
-  }
-
-  function setupBoxEvents(targetBox, sourceBox) {
-    targetBox.ondragover = function(e) {
-      e.preventDefault();
-      if (!draggedData) return;
-      var placeholderSpan = targetBox.querySelector('.placeholder');
-      if (placeholderSpan) placeholderSpan.style.display = 'none';
-      var afterElement = getDragAfterElement(targetBox, e.clientX, e.clientY);
-      if (afterElement) {
-        targetBox.insertBefore(placeholder, afterElement);
-      } else {
-        targetBox.appendChild(placeholder);
-      }
-    };
-
-    targetBox.ondragleave = function(e) {
-      if (e.target === targetBox && !targetBox.contains(e.relatedTarget)) {
-        removePlaceholder();
-        var placeholderSpan = targetBox.querySelector('.placeholder');
-        if (placeholderSpan && selected.length === 0) {
-          placeholderSpan.style.display = 'block';
+    function getDragAfterElement(container, x, y) {
+      var chips = Array.from(container.querySelectorAll('.word-chip:not(.dragging)'));
+      for (var i = 0; i < chips.length; i++) {
+        var box = chips[i].getBoundingClientRect();
+        var boxCenter = box.left + box.width / 2;
+        if (y < box.bottom && (y < box.top || x < boxCenter)) {
+          return chips[i];
         }
       }
-    };
+      return null;
+    }
 
-    targetBox.ondrop = function(e) {
-      e.preventDefault();
-      if (!draggedData) return;
-      var children = Array.from(targetBox.querySelectorAll('.word-chip:not(.dragging), .chip-placeholder'));
-      var insertIndex = children.indexOf(placeholder);
-      if (insertIndex === -1) insertIndex = selected.length;
+    function saveState() {
+      var userText = selected.map(function(i) { return i.text; }).join(' ');
+      var unusedWords = available.map(function(i) { return i.text; });
+      var isCorrect = (userText === originalWords.join(' '));
+      var payload = JSON.stringify({
+        sentence: originalText,
+        userText: userText,
+        unusedWords: unusedWords,
+        isCorrect: isCorrect
+      });
+      try {
+        localStorage.setItem("anki_shuffle_state", payload);
+      } catch(e) {}
+      try {
+        window.name = payload;
+      } catch(e) {}
+    }
 
-      if (draggedData.location === 'source') {
-        available.splice(draggedData.index, 1);
+    function render() {
+      removePlaceholder();
+      var targetBox = document.getElementById('target-box');
+      var sourceBox = document.getElementById('source-box');
+      if (!targetBox || !sourceBox) return;
+
+      targetBox.innerHTML = '';
+      sourceBox.innerHTML = '';
+
+      if (selected.length === 0) {
+        targetBox.innerHTML = '<span class="placeholder">Tap or drag words here...</span>';
       } else {
-        selected.splice(draggedData.index, 1);
-        if (draggedData.index < insertIndex) insertIndex--;
+        selected.forEach(function(item, index) {
+          targetBox.appendChild(createChip(item, 'target', index));
+        });
       }
 
-      selected.splice(insertIndex, 0, draggedData.item);
+      available.forEach(function(item, index) {
+        sourceBox.appendChild(createChip(item, 'source', index));
+      });
+
+      saveState();
+      setupBoxEvents(targetBox, sourceBox);
+    }
+
+    function createChip(item, location, index) {
+      var chip = document.createElement('div');
+      chip.setAttribute('role', 'button');
+      chip.className = 'word-chip' + (location === 'target' ? ' active-chip' : '');
+      chip.innerText = item.text;
+      chip.draggable = true;
+
+      chip.onclick = function() {
+        if (location === 'target') {
+          selected.splice(index, 1);
+          available.push(item);
+        } else {
+          available.splice(index, 1);
+          selected.push(item);
+        }
+        render();
+      };
+
+      chip.addEventListener('dragstart', function(e) {
+        draggedData = { item: item, location: location, index: index };
+        chip.classList.add('dragging');
+        placeholder.style.width = chip.offsetWidth + 'px';
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      chip.addEventListener('dragend', function() {
+        chip.classList.remove('dragging');
+        removePlaceholder();
+        draggedData = null;
+      });
+
+      return chip;
+    }
+
+    function setupBoxEvents(targetBox, sourceBox) {
+      targetBox.ondragover = function(e) {
+        e.preventDefault();
+        if (!draggedData) return;
+        var placeholderSpan = targetBox.querySelector('.placeholder');
+        if (placeholderSpan) placeholderSpan.style.display = 'none';
+        var afterElement = getDragAfterElement(targetBox, e.clientX, e.clientY);
+        if (afterElement) {
+          targetBox.insertBefore(placeholder, afterElement);
+        } else {
+          targetBox.appendChild(placeholder);
+        }
+      };
+
+      targetBox.ondragleave = function(e) {
+        if (e.target === targetBox && !targetBox.contains(e.relatedTarget)) {
+          removePlaceholder();
+          var placeholderSpan = targetBox.querySelector('.placeholder');
+          if (placeholderSpan && selected.length === 0) {
+            placeholderSpan.style.display = 'block';
+          }
+        }
+      };
+
+      targetBox.ondrop = function(e) {
+        e.preventDefault();
+        if (!draggedData) return;
+        var children = Array.from(targetBox.querySelectorAll('.word-chip:not(.dragging), .chip-placeholder'));
+        var insertIndex = children.indexOf(placeholder);
+        if (insertIndex === -1) insertIndex = selected.length;
+
+        if (draggedData.location === 'source') {
+          available.splice(draggedData.index, 1);
+        } else {
+          selected.splice(draggedData.index, 1);
+          if (draggedData.index < insertIndex) insertIndex--;
+        }
+
+        selected.splice(insertIndex, 0, draggedData.item);
+        render();
+      };
+
+      sourceBox.ondragover = function(e) {
+        e.preventDefault();
+        removePlaceholder();
+      };
+
+      sourceBox.ondrop = function(e) {
+        e.preventDefault();
+        if (!draggedData) return;
+        if (draggedData.location === 'target') {
+          selected.splice(draggedData.index, 1);
+          available.push(draggedData.item);
+          render();
+        }
+      };
+    }
+
+    window.resetShuffle = function() {
+      available = shuffle(pool);
+      selected = [];
       render();
     };
 
-    sourceBox.ondragover = function(e) {
-      e.preventDefault();
-      removePlaceholder();
-    };
-
-    sourceBox.ondrop = function(e) {
-      e.preventDefault();
-      if (!draggedData) return;
-      if (draggedData.location === 'target') {
-        selected.splice(draggedData.index, 1);
-        available.push(draggedData.item);
-        render();
-      }
-    };
+    render();
   }
 
-  window.resetShuffle = function() {
-    available = shuffle(pool);
-    selected = [];
-    render();
-  };
+  if (dummyRaw.includes(',')) {
+    var rawList = dummyRaw.split(',');
+    var validList = filterValidDummies(rawList);
+    var picked = validList.length > 0 ? validList[Math.floor(Math.random() * validList.length)].trim() : null;
+    startWithDummy(picked);
+  } else {
+    fetch('_dummyWords.json')
+      .then(function(res) {
+        if (!res.ok) throw new Error('File not found');
+        return res.json();
+      })
+      .then(function(json) {
+        var candidates = json[dummyRaw];
+        if (Array.isArray(candidates)) {
+          var validList = filterValidDummies(candidates);
+          if (validList.length > 0) {
+            var picked = validList[Math.floor(Math.random() * validList.length)].trim();
+            startWithDummy(picked);
+            return;
+          }
+        }
+        fallbackSingle();
+      })
+      .catch(function() {
+        fallbackSingle();
+      });
 
-  saveState();
-  render();
+    function fallbackSingle() {
+      var validList = filterValidDummies([dummyRaw]);
+      var picked = validList.length > 0 ? validList[0].trim() : null;
+      startWithDummy(picked);
+    }
+  }
 })();
 </script>

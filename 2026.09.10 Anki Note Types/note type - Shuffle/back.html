@@ -1,4 +1,4 @@
-<!-- back.html - do not delete this line nor modify. v8 -->
+<!-- back.html - do not delete this line nor modify. v9 -->
 <div id="anki-back-flag" style="display:none;"></div>
 
 {{FrontSide}}
@@ -16,6 +16,12 @@
     background: #ffebee !important;
     color: #c62828 !important;
     border: 1px solid #ef9a9a !important;
+    text-decoration: line-through;
+  }
+  .shuffle-container .word-chip.chip-dummy {
+    background: #f3e5f5 !important;
+    color: #7b1fa2 !important;
+    border: 1px solid #ce93d8 !important;
     text-decoration: line-through;
   }
   .shuffle-container .word-chip.chip-missing {
@@ -103,6 +109,12 @@
   var correctWords = correctText.split(/\s+/).filter(Boolean);
   var userWords = userText ? userText.split(/\s+/).filter(Boolean) : [];
 
+  function normalize(w) {
+    return (w || '').toLowerCase().replace(/[^\w]/g, '');
+  }
+
+  var correctNormSet = new Set(correctWords.map(normalize));
+
   // Track required word counts to differentiate essential left-out words vs dummy words
   var reqCounts = {};
   correctWords.forEach(function(w) {
@@ -158,7 +170,6 @@
     setTimeout(function() {
       if (typeof pycmd !== "undefined") {
         pycmd("mino_rate_good");
-        //pycmd("ease3");
       } else if (typeof AnkiDroidJS !== "undefined") {
         AnkiDroidJS.answerCard(3);
       }
@@ -178,8 +189,17 @@
   } else {
     userWords.forEach(function(word, idx) {
       var isMatch = correctWords[idx] && correctWords[idx].toLowerCase() === word.toLowerCase();
+      var isDummy = !correctNormSet.has(normalize(word));
+
+      var chipClass = "chip-mismatch";
+      if (isMatch) {
+        chipClass = "chip-match";
+      } else if (isDummy) {
+        chipClass = "chip-dummy";
+      }
+
       var chip = document.createElement("div");
-      chip.className = "word-chip active-chip " + (isMatch ? "chip-match" : "chip-mismatch");
+      chip.className = "word-chip active-chip " + chipClass;
       chip.innerText = word;
       chip.dataset.initialBox = "target";
       chip.dataset.initialIdx = idx;
@@ -272,7 +292,7 @@
 
     } else {
       // === REVERT TO YOUR ANSWER ===
-      // Restore strikethrough for user's mismatched words
+      // Restore strikethrough for user's mismatched / dummy words
       allChips.forEach(function(c) {
         c.style.textDecoration = '';
       });
@@ -320,7 +340,6 @@
 
   // Smooth FLIP animation helper
   function animateChips(allChips, firstPositions, onComplete) {
-    // 2. INVERT: Calculate position deltas
     allChips.forEach(function(chip) {
       var first = firstPositions.get(chip);
       if (first) {
@@ -333,12 +352,10 @@
       }
     });
 
-    // Force reflow
     document.body.offsetHeight;
 
-    // 3. PLAY: Speed settings
-    var animDuration = 800; // Slide duration (ms)
-    var maxDelay = 350;     // Stagger delay cap (ms)
+    var animDuration = 800;
+    var maxDelay = 350;
 
     allChips.forEach(function(chip, idx) {
       var first = firstPositions.get(chip);
@@ -349,7 +366,6 @@
       }
     });
 
-    // 4. CLEANUP
     var totalTime = animDuration + Math.min(allChips.length * 45, maxDelay) + 50;
     setTimeout(function() {
       allChips.forEach(function(chip) {
