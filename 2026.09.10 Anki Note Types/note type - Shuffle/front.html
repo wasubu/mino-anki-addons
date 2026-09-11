@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v9.4 -->
+<!-- front.html - do not delete this line nor modify. v9.5 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -267,19 +267,19 @@
       if (!targetBox || !sourceBox) return;
 
       if (isLongSentence && !hasAnimatedLock) {
-        var lockIdx = Math.floor(Math.random() * (available.length + 1));
-        available.splice(lockIdx, 0, lockedItem);
-
+        // 1. Add locked word to end of source pool to measure its start position
+        available.push(lockedItem);
         renderBoxes();
 
         var sourceElem = sourceBox.querySelector('[data-lock="true"]');
         var startRect = sourceElem ? sourceElem.getBoundingClientRect() : null;
 
-        available.splice(lockIdx, 1);
+        // 2. Remove locked word from source pool and place it in target box
+        available.pop();
         selected = [lockedItem];
-
         renderBoxes();
 
+        // 3. Animate locked word from source position to target box
         var targetElem = targetBox.querySelector('[data-lock="true"]');
 
         if (sourceElem && targetElem && startRect) {
@@ -293,16 +293,20 @@
 
           targetElem.offsetHeight;
 
-          targetElem.classList.add('locked-chip');
-          targetElem.style.transition = 'transform 0.6s ease-in-out, background-color 0.6s ease-in-out, border-color 0.6s ease-in-out, color 0.6s ease-in-out';
-          targetElem.style.transform = 'translate(0, 0)';
+          // 500ms delay before animating to target position
+          setTimeout(function() {
+            targetElem.classList.add('locked-chip');
+            targetElem.style.transition = 'transform 0.6s ease-in-out, background-color 0.6s ease-in-out, border-color 0.6s ease-in-out, color 0.6s ease-in-out';
+            targetElem.style.transform = 'translate(0, 0)';
+          }, 500);
 
+          // Reset inline styles after 1150ms total (500ms delay + 650ms animation)
           setTimeout(function() {
             if (targetElem) {
               targetElem.style.transition = '';
               targetElem.style.transform = '';
             }
-          }, 650);
+          }, 1150);
         }
 
         hasAnimatedLock = true;
