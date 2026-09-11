@@ -1,4 +1,4 @@
-<!-- back.html - do not delete this line nor modify. v9 -->
+<!-- back.html - do not delete this line nor modify. v10.3 -->
 <div id="anki-back-flag" style="display:none;"></div>
 
 {{FrontSide}}
@@ -115,7 +115,6 @@
 
   var correctNormSet = new Set(correctWords.map(normalize));
 
-  // Track required word counts to differentiate essential left-out words vs dummy words
   var reqCounts = {};
   correctWords.forEach(function(w) {
     var key = w.toLowerCase();
@@ -127,7 +126,6 @@
     if (reqCounts[key] && reqCounts[key] > 0) reqCounts[key]--;
   });
 
-  // Render unused words in Word Bank (Keep box visible even when empty)
   if (sourceBox) {
     sourceBox.innerHTML = "";
     sourceBox.style.display = "flex";
@@ -136,10 +134,10 @@
         var key = word.toLowerCase();
         var chip = document.createElement("div");
         if (reqCounts[key] && reqCounts[key] > 0) {
-          chip.className = "word-chip chip-missing"; // Essential left-out word (Yellow)
+          chip.className = "word-chip chip-missing";
           reqCounts[key]--;
         } else {
-          chip.className = "word-chip"; // Dummy word (Original Blue)
+          chip.className = "word-chip";
         }
         chip.innerText = word;
         chip.dataset.initialBox = "source";
@@ -165,6 +163,7 @@
       targetBox.appendChild(chip);
     });
 
+    if (typeof window.initTimingSync === 'function') window.initTimingSync();
     if (typeof window.replayVideo === 'function') window.replayVideo();
 
     setTimeout(function() {
@@ -207,7 +206,8 @@
     });
   }
 
-  // Create Toggle Button
+  if (typeof window.initTimingSync === 'function') window.initTimingSync();
+
   if (backResult) {
     backResult.innerHTML = '<button id="btn-show-answer" class="btn-show-answer green-state">See the right answer</button>';
     var btn = document.getElementById("btn-show-answer");
@@ -222,7 +222,6 @@
 
     var allChips = Array.from(document.querySelectorAll('.word-chip'));
 
-    // 1. FIRST: Record initial positions
     var firstPositions = new Map();
     allChips.forEach(function(chip) {
       firstPositions.set(chip, chip.getBoundingClientRect());
@@ -231,7 +230,6 @@
     var placeholder = targetBox.querySelector('.placeholder');
 
     if (!isShowingRightAnswer) {
-      // === SHOW RIGHT ANSWER ===
       if (placeholder) placeholder.style.display = 'none';
 
       var pool = allChips.slice();
@@ -256,7 +254,6 @@
       var sourceChips = pool;
       var activeAllChips = targetChips.concat(sourceChips);
 
-      // Remove strikethrough while showing the right sentence
       activeAllChips.forEach(function(c) {
         c.style.textDecoration = 'none';
       });
@@ -278,21 +275,11 @@
         }
         isShowingRightAnswer = true;
 
-        if (typeof window.replayVideo === 'function') {
-          window.replayVideo();
-        } else {
-          var vid = document.getElementById('card-video');
-          if (vid) {
-            vid.currentTime = 0;
-            vid.muted = false;
-            vid.play();
-          }
-        }
+        if (typeof window.initTimingSync === 'function') window.initTimingSync();
+        if (typeof window.replayVideo === 'function') window.replayVideo();
       });
 
     } else {
-      // === REVERT TO YOUR ANSWER ===
-      // Restore strikethrough for user's mismatched / dummy words
       allChips.forEach(function(c) {
         c.style.textDecoration = '';
       });
@@ -334,11 +321,11 @@
           btn.disabled = false;
         }
         isShowingRightAnswer = false;
+        if (typeof window.initTimingSync === 'function') window.initTimingSync();
       });
     }
   }
 
-  // Smooth FLIP animation helper
   function animateChips(allChips, firstPositions, onComplete) {
     allChips.forEach(function(chip) {
       var first = firstPositions.get(chip);

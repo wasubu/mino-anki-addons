@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v10.2 -->
+<!-- front.html - do not delete this line nor modify. v10.3 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -53,6 +53,18 @@
   .shuffle-container .word-chip.locked-chip:hover {
     background-color: #d1f2eb !important;
   }
+
+  /* Active timing fill highlight */
+  .shuffle-container .word-chip.timing-active {
+    background-color: #2196f3 !important;
+    color: #ffffff !important;
+    border-color: #1976d2 !important;
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+    z-index: 2;
+    transition: background-color 0.1s ease, transform 0.1s ease, box-shadow 0.1s ease;
+  }
+
   .target-box .placeholder-box {
     display: inline-flex;
     align-items: center;
@@ -70,21 +82,13 @@
   }
 
   @keyframes glide {
-    from {
-      translate: var(--dx) var(--dy);
-    }
-    to {
-      translate: 0 0;
-    }
+    from { translate: var(--dx) var(--dy); }
+    to { translate: 0 0; }
   }
 
   @keyframes pop {
-    0%, 100% {
-      scale: 1;
-    }
-    50% {
-      scale: 1.8;
-    }
+    0%, 100% { scale: 1; }
+    50% { scale: 1.8; }
   }
 </style>
 
@@ -120,6 +124,7 @@
 
   <div id="hidden-sentence" style="display:none;">{{Sentence}}</div>
   <div id="hidden-dummy" style="display:none;">{{dummy}}</div>
+  <div id="hidden-timing" style="display:none;">{{Timing}}</div>
 
   <div class="controls">
     <div class="btn-reset" role="button" onclick="resetShuffle()">↺ Reset</div>
@@ -130,9 +135,100 @@
 (function() {
   if (document.getElementById('anki-back-flag')) return;
 
+  // --- Timing Sync Engine ---
+  var timingElem = document.getElementById('hidden-timing');
+  var timingRaw = timingElem ? timingElem.innerText.trim() : '';
+  var intervals = timingRaw ? timingRaw.split(',').map(function(s) { return parseFloat(s.trim()) || 0; }) : [];
+  
+  var wordTimestamps = [];
+  if (intervals.length > 0) {
+    var cumulativeMs = 0;
+    for (var t = 0; t < intervals.length; t++) {
+      cumulativeMs += intervals[t];
+      wordTimestamps.push(cumulativeMs / 1000.0);
+    }
+  }
+
+  var animFrameId = null;
+
+  function clearActiveTiming() {
+    var activeChips = document.querySelectorAll('.word-chip.timing-active');
+    activeChips.forEach(function(c) { c.classList.remove('timing-active'); });
+  }
+
+  function syncWordTiming() {
+    var vid = document.getElementById('card-video');
+    var targetBox = document.getElementById('target-box');
+    if (!vid || !targetBox || wordTimestamps.length === 0) return;
+
+    var currentTime = vid.currentTime;
+    var activeIdx = -1;
+
+    for (var i = wordTimestamps.length - 1; i >= 0; i--) {
+      if (currentTime >= wordTimestamps[i]) {
+        var nextTime = (i < wordTimestamps.length - 1) ? wordTimestamps[i + 1] : (wordTimestamps[i] + 0.6);
+        if (currentTime < nextTime) {
+          activeIdx = i;
+        }
+        break;
+      }
+    }
+
+    var targetChips = targetBox.querySelectorAll('.word-chip');
+    targetChips.forEach(function(chip, idx) {
+      if (idx === activeIdx) {
+        chip.classList.add('timing-active');
+      } else {
+        chip.classList.remove('timing-active');
+      }
+    });
+  }
+
+  window.initTimingSync = function() {
+    var vid = document.getElementById('card-video');
+    if (!vid || wordTimestamps.length === 0) return;
+
+    function tick() {
+      syncWordTiming();
+      if (!vid.paused && !vid.ended) {
+        animFrameId = requestAnimationFrame(tick);
+      }
+    }
+
+    function onPlay() {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      animFrameId = requestAnimationFrame(tick);
+    }
+
+    function onPause() {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      syncWordTiming();
+    }
+
+    function onEnded() {
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      clearActiveTiming();
+    }
+
+    vid.removeEventListener('play', onPlay);
+    vid.removeEventListener('pause', onPause);
+    vid.removeEventListener('ended', onEnded);
+    vid.removeEventListener('seeked', syncWordTiming);
+
+    vid.addEventListener('play', onPlay);
+    vid.addEventListener('pause', onPause);
+    vid.addEventListener('ended', onEnded);
+    vid.addEventListener('seeked', syncWordTiming);
+
+    if (!vid.paused && !vid.ended) {
+      tick();
+    }
+  };
+
   window.replayVideo = function() {
     var vid = document.getElementById('card-video');
     if (vid) {
+      clearActiveTiming();
       vid.currentTime = 0;
       vid.muted = false;
       vid.play();
@@ -144,6 +240,7 @@
     if (document.activeElement && document.activeElement !== document.body) {
       document.activeElement.blur();
     }
+    window.initTimingSync();
   }, 150);
 
   var sentenceElem = document.getElementById('hidden-sentence');
@@ -280,6 +377,7 @@
 
       saveState();
       setupBoxEvents(targetBox, sourceBox);
+      if (typeof window.initTimingSync === 'function') window.initTimingSync();
     }
 
     function render() {
