@@ -1,98 +1,9 @@
-<!-- back.html - do not delete this line nor modify. v10.4 -->
+<!-- back.html - do not delete this line nor modify. v10.5 -->
 <div id="anki-back-flag" style="display:none;"></div>
 
 {{FrontSide}}
 
 <div id="back-result"></div>
-
-<style>
-  /* back.html - do not delete this line nor modify. */
-  /* High-specificity overrides for back-card chip feedback */
-  .shuffle-container .word-chip.chip-match {
-    background: #e8f5e9 !important;
-    color: #2e7d32 !important;
-    border: 1px solid #a5d6a7 !important;
-  }
-  .shuffle-container .word-chip.chip-mismatch {
-    background: #ffebee !important;
-    color: #c62828 !important;
-    border: 1px solid #ef9a9a !important;
-    text-decoration: line-through;
-  }
-  .shuffle-container .word-chip.chip-dummy {
-    background: #f3e5f5 !important;
-    color: #7b1fa2 !important;
-    border: 1px solid #ce93d8 !important;
-    text-decoration: line-through;
-  }
-  .shuffle-container .word-chip.chip-missing {
-    background: #fff8e1 !important;
-    color: #b78103 !important;
-    border: 1px solid #ffe082 !important;
-    font-weight: 600;
-  }
-
-  /* Ultra-high specificity override: Solid blue fill, white text, no glow, no strike-through */
-  .shuffle-container .word-chip.timing-active,
-  .shuffle-container .word-chip.timing-active:hover,
-  .shuffle-container .word-chip.timing-active:active,
-  .nightMode .shuffle-container .word-chip.timing-active,
-  .nightMode .shuffle-container .word-chip.timing-active:hover {
-    background: #1976d2 !important;
-    background-color: #1976d2 !important;
-    color: #ffffff !important;
-    border: 1px solid #1565c0 !important;
-    box-shadow: none !important;
-    text-decoration: none !important;
-    transform: scale(1.08) !important;
-    opacity: 1 !important;
-    z-index: 10 !important;
-  }
-
-  /* Shared Button Base Styles */
-  .shuffle-container .btn-show-answer {
-    display: block;
-    width: 100%;
-    box-sizing: border-box;
-    margin: 12px 0 6px 0;
-    padding: 12px 18px;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 1em;
-    cursor: pointer;
-    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
-  }
-
-  /* Default State: Light Green ("See the right answer") */
-  .shuffle-container .btn-show-answer.green-state {
-    background: #e8f5e9 !important;
-    color: #2e7d32 !important;
-    border: 2px solid #2e7d32 !important;
-  }
-  .shuffle-container .btn-show-answer.green-state:hover {
-    background: #c8e6c9 !important;
-  }
-
-  /* Toggled State: Light Blue ("See your answer") */
-  .shuffle-container .btn-show-answer.blue-state {
-    background: #e3f2fd !important;
-    color: #1976d2 !important;
-    border: 2px solid #1976d2 !important;
-  }
-  .shuffle-container .btn-show-answer.blue-state:hover {
-    background: #bbdefb !important;
-  }
-
-  .shuffle-container .btn-show-answer:active {
-    transform: scale(0.98);
-  }
-  .shuffle-container .btn-show-answer:disabled {
-    opacity: 0.5;
-    cursor: default;
-    transform: none;
-  }
-</style>
 
 <script>
 // back.html - do not delete this line nor modify.
@@ -129,7 +40,6 @@
   var correctWords = correctText.split(/\s+/).filter(Boolean);
   var userWords = userText ? userText.split(/\s+/).filter(Boolean) : [];
 
-  // Parse timing timestamps for Back Card sync
   var timingRaw = timingElem ? timingElem.innerText.trim() : '';
   var intervals = timingRaw ? timingRaw.split(',').map(function(s) { return parseFloat(s.trim()) || 0; }) : [];
   var wordTimestamps = [];
@@ -179,7 +89,6 @@
     }
   }
 
-  // --- Dual-Box Timing Sync Engine ---
   var animFrameId = null;
   var isShowingRightAnswer = false;
 
@@ -218,13 +127,11 @@
 
       var highlighted = false;
 
-      // 1. Try exact slot in input area first
       if (targetChips[activeIdx] && normalize(targetChips[activeIdx].innerText) === activeWordNorm) {
         targetChips[activeIdx].classList.add('timing-active');
         highlighted = true;
       }
 
-      // 2. Search input area for the matching word
       if (!highlighted) {
         for (var t = 0; t < targetChips.length; t++) {
           if (normalize(targetChips[t].innerText) === activeWordNorm) {
@@ -235,7 +142,6 @@
         }
       }
 
-      // 3. Search wordbank (source box) for the matching word
       if (!highlighted) {
         for (var s = 0; s < sourceChips.length; s++) {
           if (normalize(sourceChips[s].innerText) === activeWordNorm) {
@@ -290,7 +196,6 @@
     }
   };
 
-  // --- 1. CORRECT ATTEMPT ---
   if (isCorrect) {
     if (badge) {
       badge.innerText = "✓ Correct";
@@ -319,7 +224,6 @@
     return;
   }
 
-  // --- 2. INCORRECT ATTEMPT ---
   if (badge) {
     badge.innerText = "✕ Incorrect";
     badge.className = "feedback-badge incorrect-badge";

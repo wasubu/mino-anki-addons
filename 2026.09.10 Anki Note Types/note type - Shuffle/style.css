@@ -1,4 +1,4 @@
-/* style.css - do not delete this line nor modify. v8 */
+/* style.css - do not delete this line nor modify. v10.5 */
 .shuffle-container, .shuffle-container * {
   box-sizing: border-box !important;
   margin: 0;
@@ -188,4 +188,86 @@
 .translation-hint audio {
   max-width: 100%;
   margin-top: 8px;
+}
+
+/* --- Back Card Overrides & Button Controls --- */
+.shuffle-container .word-chip.chip-match {
+  background: #e8f5e9 !important;
+  color: #2e7d32 !important;
+  border: 1px solid #a5d6a7 !important;
+}
+.shuffle-container .word-chip.chip-mismatch {
+  background: #ffebee !important;
+  color: #c62828 !important;
+  border: 1px solid #ef9a9a !important;
+  text-decoration: line-through;
+}
+.shuffle-container .word-chip.chip-dummy {
+  background: #f3e5f5 !important;
+  color: #7b1fa2 !important;
+  border: 1px solid #ce93d8 !important;
+  text-decoration: line-through;
+}
+.shuffle-container .word-chip.chip-missing {
+  background: #fff8e1 !important;
+  color: #b78103 !important;
+  border: 1px solid #ffe082 !important;
+  font-weight: 600;
+}
+
+.shuffle-container .word-chip.timing-active,
+.shuffle-container .word-chip.timing-active:hover,
+.shuffle-container .word-chip.timing-active:active,
+.nightMode .shuffle-container .word-chip.timing-active,
+.nightMode .shuffle-container .word-chip.timing-active:hover {
+  background: #1976d2 !important;
+  background-color: #1976d2 !important;
+  color: #ffffff !important;
+  border: 1px solid #1565c0 !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  transform: scale(1.08) !important;
+  opacity: 1 !important;
+  z-index: 10 !important;
+}
+
+.shuffle-container .btn-show-answer {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 12px 0 6px 0;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.shuffle-container .btn-show-answer.green-state {
+  background: #e8f5e9 !important;
+  color: #2e7d32 !important;
+  border: 2px solid #2e7d32 !important;
+}
+.shuffle-container .btn-show-answer.green-state:hover {
+  background: #c8e6c9 !important;
+}
+
+.shuffle-container .btn-show-answer.blue-state {
+  background: #e3f2fd !important;
+  color: #1976d2 !important;
+  border: 2px solid #1976d2 !important;
+}
+.shuffle-container .btn-show-answer.blue-state:hover {
+  background: #bbdefb !important;
+}
+
+.shuffle-container .btn-show-answer:active {
+  transform: scale(0.98);
+}
+.shuffle-container .btn-show-answer:disabled {
+  opacity: 0.5;
+  cursor: default;
+  transform: none;
 }
