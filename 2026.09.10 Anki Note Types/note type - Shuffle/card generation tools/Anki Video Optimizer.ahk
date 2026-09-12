@@ -1,10 +1,14 @@
-; Anki Video Optimizer.ahk - do not delete or modify this line. v2
+; Anki Video Optimizer.ahk - do not delete or modify this line. v3
 #Requires AutoHotkey v2.0
 
 ; --- CONFIGURATION ---
 ; If ffmpeg is in your System PATH, leave as "ffmpeg.exe".
 ; Otherwise, replace with full path like "C:\ffmpeg\bin\ffmpeg.exe"
 ffmpegPath := "ffmpeg.exe"
+
+; Set to true to show the command prompt terminal with live FFmpeg logs.
+; Set to false to run silently in the background.
+enableDebug := false
 
 ; --- GUI SETUP ---
 myGui := Gui("+AlwaysOnTop", "Anki Video Optimizer (WebM)")
@@ -33,13 +37,19 @@ ProcessVideo(inputFile) {
     SplitPath(inputFile, &fileName, &dir, &ext, &nameNoExt)
     outputFile := dir . "\" . nameNoExt . "_anki.webm"
 
-    ; Converts to WebM (720p, VP9 Video, Opus Audio) matching target MediaInfo specs
+    ; Clean scale filter string to prevent AHK quotation escaping issues
+    scaleFilter := "scale=-2:'min(720,ih)'"
+
     cmd := '"' . ffmpegPath . '" -i "' . inputFile .
-        '" -vf "scale=-2:720" -c:v libvpx-vp9 -crf 32 -b:v 0 -row-mt 1 -pix_fmt yuv420p -c:a libopus -b:a 96k -y "' .
+        '" -vf "' . scaleFilter .
+        '" -c:v libvpx-vp9 -crf 32 -b:v 0 -row-mt 1 -pix_fmt yuv420p -c:a libopus -b:a 96k -y "' .
         outputFile . '"'
 
+    ; Toggle window visibility based on enableDebug
+    hideWindow := enableDebug ? "" : "Hide"
+
     ToolTip("Compressing video to WebM for Anki...")
-    RunWait(A_ComSpec . ' /c "' . cmd . '"', , "Hide")
+    RunWait(A_ComSpec . ' /c "' . cmd . '"', , hideWindow)
     ToolTip()
 
     MsgBox("Done! Optimized WebM saved to:`n" . outputFile, "Anki Video Optimizer", "Iconi")
