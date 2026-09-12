@@ -1,4 +1,4 @@
-<!-- back.html - do not delete this line nor modify. v10.5 -->
+<!-- back.html - do not delete this line nor modify. v10.6 -->
 <div id="anki-back-flag" style="display:none;"></div>
 
 {{FrontSide}}
@@ -91,8 +91,11 @@
 
   var animFrameId = null;
   var isShowingRightAnswer = false;
+  var isAnimating = false;
 
   function syncBackTiming() {
+    if (isAnimating) return; // Prevent transform collisions during motion
+
     var vid = document.getElementById('card-video');
     if (!vid || wordTimestamps.length === 0) return;
 
@@ -265,7 +268,10 @@
     var btn = document.getElementById("btn-show-answer");
     if (btn) btn.disabled = true;
 
+    isShowingRightAnswer = !isShowingRightAnswer;
+
     var allChips = Array.from(document.querySelectorAll('.word-chip'));
+    allChips.forEach(function(c) { c.classList.remove('timing-active'); });
 
     var firstPositions = new Map();
     allChips.forEach(function(chip) {
@@ -274,7 +280,7 @@
 
     var placeholder = targetBox.querySelector('.placeholder');
 
-    if (!isShowingRightAnswer) {
+    if (isShowingRightAnswer) {
       if (placeholder) placeholder.style.display = 'none';
 
       var pool = allChips.slice();
@@ -318,9 +324,6 @@
           btn.className = "btn-show-answer blue-state";
           btn.disabled = false;
         }
-        isShowingRightAnswer = true;
-
-        window.initTimingSync();
         if (typeof window.replayVideo === 'function') window.replayVideo();
       });
 
@@ -365,13 +368,13 @@
           btn.className = "btn-show-answer green-state";
           btn.disabled = false;
         }
-        isShowingRightAnswer = false;
-        window.initTimingSync();
       });
     }
   }
 
   function animateChips(allChips, firstPositions, onComplete) {
+    isAnimating = true;
+
     allChips.forEach(function(chip) {
       var first = firstPositions.get(chip);
       if (first) {
@@ -404,6 +407,8 @@
         chip.style.transition = '';
         chip.style.transform = '';
       });
+      isAnimating = false;
+      syncBackTiming();
       if (onComplete) onComplete();
     }, totalTime);
   }
