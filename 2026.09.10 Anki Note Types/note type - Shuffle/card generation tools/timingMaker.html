@@ -1,19 +1,20 @@
-<!-- timingMaker.html - do not delete this line nor modify. v1 -->
+<!-- timingMaker.html - do not delete this line nor modify. v2 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Anki Timing Marker Tool</title>
+  <title>Anki Timing Generator v2</title>
   <style>
     :root {
-      --bg: #0f1117;
-      --card-bg: #1a1d26;
+      --bg: #0d0f14;
+      --card-bg: #161922;
       --accent: #00f2fe;
       --accent-hover: #4facfe;
       --text: #e2e8f0;
-      --text-muted: #94a3b8;
-      --border: #2e3545;
+      --text-muted: #8a99ad;
+      --border: #262c3a;
       --marker-color: #ff4757;
+      --marker-hover: #ff6b81;
       --active-word: #2ed573;
     }
 
@@ -22,30 +23,80 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
-      padding: 24px;
-      max-width: 1100px;
+      padding: 20px;
+      max-width: 1400px;
       margin: 0 auto;
     }
 
+    header {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
     h1 {
-      font-size: 1.4rem;
-      margin-bottom: 16px;
+      font-size: 1.3rem;
       color: var(--accent);
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
+    }
+
+    /* Two-Column App Layout */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .app-layout { grid-template-columns: 1fr; }
     }
 
     .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
     }
 
-    /* Top Form Controls */
+    /* Left Column Elements */
+    .video-container {
+      display: flex;
+      justify-content: center;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      max-height: 340px;
+      margin-bottom: 14px;
+    }
+
+    video {
+      max-height: 340px;
+      width: auto;
+    }
+
+    .timeline-wrapper {
+      position: relative;
+      width: 100%;
+      height: 150px;
+      background: #0a0c10;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Form Controls */
     .form-group {
       display: flex;
       flex-direction: column;
@@ -54,8 +105,8 @@
     }
 
     label {
-      font-size: 0.85rem;
-      font-weight: 600;
+      font-size: 0.8rem;
+      font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -63,12 +114,12 @@
 
     input[type="text"] {
       width: 100%;
-      background: #111319;
+      background: #0e1017;
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 12px 16px;
+      padding: 12px 14px;
       color: #fff;
-      font-size: 1rem;
+      font-size: 0.95rem;
       outline: none;
       transition: border-color 0.2s;
     }
@@ -79,7 +130,7 @@
 
     .flex-row {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
       flex-wrap: wrap;
     }
@@ -88,73 +139,98 @@
       background: var(--border);
       color: #fff;
       border: none;
-      padding: 10px 18px;
+      padding: 9px 16px;
       border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       transition: all 0.2s;
     }
 
-    .btn:hover { background: #3b4458; }
+    .btn:hover { background: #323b4e; }
     .btn-primary { background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; }
     .btn-primary:hover { opacity: 0.9; }
-    .btn-danger { background: #ff4757; color: #fff; }
 
     input[type="file"] { display: none; }
     .file-upload-btn {
-      background: #252a37;
+      background: #1f2533;
       border: 1px dashed var(--accent);
-      padding: 10px 18px;
+      padding: 8px 16px;
       border-radius: 8px;
       cursor: pointer;
       color: var(--accent);
       font-weight: 600;
+      font-size: 0.88rem;
       display: inline-block;
     }
 
-    /* Video Preview */
-    .video-container {
+    /* Word Chips */
+    .words-container {
       display: flex;
-      justify-content: center;
-      background: #000;
-      border-radius: 8px;
-      overflow: hidden;
-      max-height: 320px;
-      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+      min-height: 80px;
     }
 
-    video {
-      max-height: 320px;
-      width: auto;
-    }
-
-    /* Timeline & Waveform */
-    .timeline-wrapper {
-      position: relative;
-      width: 100%;
-      height: 140px;
-      background: #111319;
+    .word-chip {
+      background: #1f2533;
       border: 1px solid var(--border);
-      border-radius: 8px;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
       cursor: pointer;
-      user-select: none;
-      overflow: hidden;
     }
 
-    canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
+    /* Active Highlight during Video Playback */
+    .word-chip.timing-active {
+      background: #2ed573 !important;
+      color: #000 !important;
+      font-weight: bold;
+      border-color: #2ed573;
+      box-shadow: 0 0 12px rgba(46, 213, 115, 0.5);
+      transform: scale(1.05);
+    }
+
+    .word-chip.marked {
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .word-chip .time-tag {
+      font-size: 0.72rem;
+      opacity: 0.85;
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-family: monospace;
+    }
+
+    /* Output Section */
+    .output-box {
+      background: #0e1017;
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 8px;
+      font-family: monospace;
+      color: var(--accent);
+      word-break: break-all;
+      margin-top: 10px;
+      min-height: 44px;
     }
 
     .hotkey-legend {
       display: flex;
-      gap: 16px;
-      margin-top: 10px;
-      font-size: 0.85rem;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+      font-size: 0.82rem;
       color: var(--text-muted);
     }
 
@@ -164,61 +240,6 @@
       padding: 2px 6px;
       border-radius: 4px;
       font-family: monospace;
-    }
-
-    /* Word Chips */
-    .words-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .word-chip {
-      background: #252a37;
-      border: 1px solid var(--border);
-      padding: 8px 14px;
-      border-radius: 20px;
-      font-size: 0.95rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-
-    .word-chip.active {
-      border-color: var(--active-word);
-      background: rgba(46, 213, 115, 0.15);
-      color: var(--active-word);
-      font-weight: bold;
-      box-shadow: 0 0 10px rgba(46, 213, 115, 0.3);
-    }
-
-    .word-chip.marked {
-      border-color: var(--accent);
-      color: #fff;
-    }
-
-    .word-chip .time-tag {
-      font-size: 0.75rem;
-      opacity: 0.8;
-      background: rgba(0,0,0,0.3);
-      padding: 2px 6px;
-      border-radius: 10px;
-      font-family: monospace;
-    }
-
-    /* Result Output */
-    .output-box {
-      background: #111319;
-      border: 1px solid var(--border);
-      padding: 12px;
-      border-radius: 8px;
-      font-family: monospace;
-      color: var(--accent);
-      word-break: break-all;
-      margin-top: 10px;
-      min-height: 44px;
     }
 
     .toast {
@@ -233,74 +254,95 @@
       opacity: 0;
       transition: opacity 0.3s ease;
       pointer-events: none;
+      z-index: 999;
     }
     .toast.show { opacity: 1; }
   </style>
 </head>
 <body>
 
-  <h1>🎬 Anki Timing Generator</h1>
+  <header>
+    <h1>🎬 Anki Timing Generator v2</h1>
+    <label class="file-upload-btn">
+      📁 Load Media File
+      <input type="file" id="media-file" accept="video/*,audio/*">
+    </label>
+  </header>
 
-  <!-- Top Inputs -->
-  <div class="card">
-    <div class="form-group">
-      <label for="sentence-input">Sentence Text</label>
-      <input type="text" id="sentence-input" value="You live to see this world crumble to dust and blow away.">
+  <div class="app-layout">
+    
+    <!-- LEFT COLUMN: Media & Timeline Canvas -->
+    <div class="col-left">
+      <div class="card" style="padding: 12px;">
+        <div class="video-container">
+          <video id="video-preview" playsinline></video>
+        </div>
+
+        <!-- Waveform & Marker Drag Timeline -->
+        <div class="timeline-wrapper" id="timeline-wrapper">
+          <canvas id="waveform-canvas"></canvas>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+          <button class="btn" id="btn-play">▶ Play / Pause</button>
+          <span id="file-name" style="font-size: 0.85rem; color: var(--text-muted);">No file loaded</span>
+        </div>
+      </div>
     </div>
 
-    <div class="flex-row">
-      <label class="file-upload-btn">
-        📁 Load Media File
-        <input type="file" id="media-file" accept="video/*,audio/*">
-      </label>
-      <span id="file-name" style="font-size: 0.9rem; color: var(--text-muted);">No file loaded</span>
-      <button class="btn" id="btn-parse" style="margin-left: auto;">Reset / Update Words</button>
-    </div>
-  </div>
+    <!-- RIGHT COLUMN: Sentence, Word Chips, Timings Output -->
+    <div class="col-right">
+      <div class="card">
+        <div class="form-group">
+          <label for="sentence-input">Sentence Text</label>
+          <input type="text" id="sentence-input" value="You live to see this world crumble to dust and blow away.">
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Editing or unfocusing text resets markers (Use <kbd>Ctrl+Z</kbd> to restore).</span>
+        </div>
 
-  <!-- Video Preview -->
-  <div class="card" style="padding: 10px;">
-    <div class="video-container">
-      <video id="video-preview" playsinline></video>
+        <div class="form-group">
+          <label>Word Timing Progress</label>
+          <div class="words-container" id="words-container"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex-row" style="justify-content: space-between;">
+          <label>Generated {{Timings}} String</label>
+          <button class="btn btn-primary" id="btn-copy">📋 Copy {{Timings}}</button>
+        </div>
+        <div class="output-box" id="output-timings">0</div>
+      </div>
+
+      <div class="card" style="padding: 14px;">
+        <label>Shortcuts</label>
+        <div class="hotkey-legend">
+          <span><kbd>Space</kbd> Play / Pause</span>
+          <span><kbd>A</kbd> Add Marker</span>
+          <span><kbd>Ctrl + Z</kbd> Undo / Revert</span>
+          <span><kbd>Drag Marker</kbd> Reposition</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Timeline & Audio Waveform -->
-    <div class="timeline-wrapper" id="timeline-wrapper">
-      <canvas id="waveform-canvas"></canvas>
-    </div>
-
-    <div class="hotkey-legend">
-      <span><kbd>Space</kbd> Play / Pause</span>
-      <span><kbd>M</kbd> Mark word timestamp</span>
-      <span><kbd>Z</kbd> Undo last marker</span>
-      <span><kbd>Click/Drag Timeline</kbd> Seek Playhead</span>
-    </div>
-  </div>
-
-  <!-- Word Marking Progress -->
-  <div class="card">
-    <label>Word Markers Progress</label>
-    <div class="words-container" id="words-container"></div>
-  </div>
-
-  <!-- Output & Copy -->
-  <div class="card">
-    <div class="flex-row" style="justify-content: space-between;">
-      <label>Generated {{Timings}} String</label>
-      <button class="btn btn-primary" id="btn-copy">📋 Copy {{Timings}} to Clipboard</button>
-    </div>
-    <div class="output-box" id="output-timings">0</div>
   </div>
 
   <div class="toast" id="toast">Copied to Clipboard!</div>
 
   <script>
-    // State variables
+    // --- State & History Engine (Ctrl+Z Support) ---
+    let historyStack = [];
+    let historyIndex = -1;
+
+    let currentState = {
+      sentence: "",
+      markers: [] // Absolute timestamps in milliseconds
+    };
+
     let words = [];
-    let markers = []; // Absolute timestamps in milliseconds
-    let activeWordIndex = 0;
     let audioBuffer = null;
-    let isDragging = false;
+    let draggedMarkerIdx = null;
+    let isScrubbing = false;
+    let hoveredMarkerIdx = null;
 
     // Elements
     const sentenceInput = document.getElementById('sentence-input');
@@ -312,11 +354,47 @@
     const timelineWrapper = document.getElementById('timeline-wrapper');
     const wordsContainer = document.getElementById('words-container');
     const outputTimings = document.getElementById('output-timings');
-    const btnParse = document.getElementById('btn-parse');
+    const btnPlay = document.getElementById('btn-play');
     const btnCopy = document.getElementById('btn-copy');
     const toast = document.getElementById('toast');
 
-    // Setup Canvas Resolution
+    // --- State Stack Management ---
+    function pushState(newState) {
+      // Truncate redo path
+      historyStack = historyStack.slice(0, historyIndex + 1);
+      // Deep clone
+      const stateCopy = JSON.parse(JSON.stringify(newState));
+      historyStack.push(stateCopy);
+      historyIndex = historyStack.length - 1;
+      applyState(stateCopy);
+    }
+
+    function undo() {
+      if (historyIndex > 0) {
+        historyIndex--;
+        applyState(historyStack[historyIndex]);
+      }
+    }
+
+    function redo() {
+      if (historyIndex < historyStack.length - 1) {
+        historyIndex++;
+        applyState(historyStack[historyIndex]);
+      }
+    }
+
+    function applyState(state) {
+      currentState = JSON.parse(JSON.stringify(state));
+      if (sentenceInput.value !== currentState.sentence) {
+        sentenceInput.value = currentState.sentence;
+      }
+      words = currentState.sentence ? currentState.sentence.split(/\s+/).filter(Boolean) : [];
+      renderWords();
+      updateOutput();
+      drawTimeline();
+    }
+
+    // --- Resize Canvas ---
     function resizeCanvas() {
       canvas.width = timelineWrapper.clientWidth * window.devicePixelRatio;
       canvas.height = timelineWrapper.clientHeight * window.devicePixelRatio;
@@ -324,58 +402,64 @@
     }
     window.addEventListener('resize', resizeCanvas);
 
-    // Sentence Parsing
-    function parseSentence() {
-      const text = sentenceInput.value.trim();
-      words = text ? text.split(/\s+/).filter(Boolean) : [];
-      markers = [];
-      activeWordIndex = 0;
-      renderWords();
-      updateOutput();
-      drawTimeline();
-    }
-
-    // Load Media & Extract Waveform
+    // --- Audio File Handling ---
     mediaFileInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
       fileNameDisplay.textContent = file.name;
-      const fileUrl = URL.createObjectURL(file);
-      video.src = fileUrl;
+      video.src = URL.createObjectURL(file);
 
-      // Decode audio for waveform canvas
       try {
         const arrayBuffer = await file.arrayBuffer();
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
         drawTimeline();
       } catch (err) {
-        console.warn('Could not extract audio waveform:', err);
+        console.warn('Audio waveform decode bypassed:', err);
         audioBuffer = null;
         drawTimeline();
       }
     });
 
-    // Render Audio Waveform + Markers + Playhead
+    // --- Draw Upside-Down House Marker ---
+    function drawUpsideDownHouse(x, y, width, height, roofHeight, color, isHovered) {
+      const hw = width / 2;
+      ctx.beginPath();
+      ctx.moveTo(x - hw, y); // Top Left
+      ctx.lineTo(x + hw, y); // Top Right
+      ctx.lineTo(x + hw, y + height - roofHeight); // Right Wall
+      ctx.lineTo(x, y + height); // Pointy Tip pointing DOWN
+      ctx.lineTo(x - hw, y + height - roofHeight); // Left Wall
+      ctx.closePath();
+
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = isHovered ? '#ffffff' : '#000000';
+      ctx.lineWidth = 1.5 * window.devicePixelRatio;
+      ctx.stroke();
+    }
+
+    // --- Timeline Renderer ---
     function drawTimeline() {
       const w = canvas.width;
       const h = canvas.height;
+      const scale = window.devicePixelRatio;
       ctx.clearRect(0, 0, w, h);
 
       // Background
-      ctx.fillStyle = '#111319';
+      ctx.fillStyle = '#0a0c10';
       ctx.fillRect(0, 0, w, h);
 
       const duration = video.duration || 1;
 
-      // 1. Draw Waveform
+      // 1. Audio Waveform
       if (audioBuffer) {
         const rawData = audioBuffer.getChannelData(0);
         const step = Math.ceil(rawData.length / w);
         const amp = h / 2;
 
-        ctx.fillStyle = '#2e3545';
+        ctx.fillStyle = '#262c3a';
         ctx.beginPath();
         for (let i = 0; i < w; i++) {
           let min = 1.0, max = -1.0;
@@ -388,97 +472,219 @@
         }
       }
 
-      // 2. Draw Time Grid / Markers
-      markers.forEach((ms, idx) => {
+      // 2. Draw Draggable House Markers
+      currentState.markers.forEach((ms, idx) => {
         const x = (ms / 1000 / duration) * w;
-        ctx.strokeStyle = '#ff4757';
-        ctx.lineWidth = 2 * window.devicePixelRatio;
+        const isHovered = (hoveredMarkerIdx === idx || draggedMarkerIdx === idx);
+
+        // Vertical Guide Line
+        ctx.strokeStyle = isHovered ? '#ff6b81' : '#ff4757';
+        ctx.lineWidth = 2 * scale;
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, h);
         ctx.stroke();
 
-        // Draw Word Label
-        ctx.fillStyle = '#ff4757';
-        ctx.font = `${11 * window.devicePixelRatio}px sans-serif`;
-        if (words[idx]) {
-          ctx.fillText(`${idx + 1}. ${words[idx]}`, x + 4, 16 * window.devicePixelRatio);
-        }
+        // Upside-Down House Marker Handle at Top
+        const markerWidth = 14 * scale;
+        const markerHeight = 22 * scale;
+        const roofHeight = 8 * scale;
+        drawUpsideDownHouse(x, 0, markerWidth, markerHeight, roofHeight, isHovered ? '#ff6b81' : '#ff4757', isHovered);
+
+        // Marker Label Number
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${9 * scale}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(idx + 1, x, 11 * scale);
       });
 
-      // 3. Draw Playhead
+      // 3. Playhead Line
       const curTime = video.currentTime || 0;
       const playheadX = (curTime / duration) * w;
 
       ctx.strokeStyle = '#00f2fe';
-      ctx.lineWidth = 3 * window.devicePixelRatio;
+      ctx.lineWidth = 2 * scale;
       ctx.beginPath();
       ctx.moveTo(playheadX, 0);
       ctx.lineTo(playheadX, h);
       ctx.stroke();
 
-      // Playhead Head Indicator
+      // Playhead Top Handle
       ctx.fillStyle = '#00f2fe';
       ctx.beginPath();
-      ctx.arc(playheadX, 6 * window.devicePixelRatio, 6 * window.devicePixelRatio, 0, Math.PI * 2);
+      ctx.arc(playheadX, 6 * scale, 5 * scale, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Animation Loop for Video Sync
+    // --- Real-time Animation Loop ---
     function animate() {
       drawTimeline();
+      updateActiveWordHighlight();
       requestAnimationFrame(animate);
     }
     requestAnimationFrame(animate);
 
-    // Scrubber / Playhead Drag Interactions
-    function seekTimeline(e) {
-      if (!video.duration) return;
+    // --- Video Active Word Highlight Logic ---
+    function updateActiveWordHighlight() {
+      if (!video || currentState.markers.length === 0) return;
+
+      const currentTimeMs = video.currentTime * 1000;
+      let activeIdx = -1;
+
+      for (let i = currentState.markers.length - 1; i >= 0; i--) {
+        if (currentTimeMs >= currentState.markers[i]) {
+          const nextTime = (i < currentState.markers.length - 1) ? currentState.markers[i + 1] : (currentState.markers[i] + 600);
+          if (currentTimeMs < nextTime) {
+            activeIdx = i;
+          }
+          break;
+        }
+      }
+
+      const chips = wordsContainer.querySelectorAll('.word-chip');
+      chips.forEach((chip, idx) => {
+        if (idx === activeIdx) {
+          chip.classList.add('timing-active');
+        } else {
+          chip.classList.remove('timing-active');
+        }
+      });
+    }
+
+    // --- Interactive Dragging & Seeking on Canvas ---
+    function getMarkerIndexAtPos(clientX) {
+      if (!video.duration) return null;
       const rect = timelineWrapper.getBoundingClientRect();
-      const clickX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-      const targetTime = (clickX / rect.width) * video.duration;
-      video.currentTime = targetTime;
+      const clickX = clientX - rect.left;
+      const duration = video.duration;
+
+      for (let i = 0; i < currentState.markers.length; i++) {
+        const markerX = (currentState.markers[i] / 1000 / duration) * rect.width;
+        if (Math.abs(markerX - clickX) <= 12) {
+          return i;
+        }
+      }
+      return null;
     }
 
     timelineWrapper.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      seekTimeline(e);
+      const hitIdx = getMarkerIndexAtPos(e.clientX);
+      if (hitIdx !== null) {
+        draggedMarkerIdx = hitIdx;
+      } else {
+        isScrubbing = true;
+        seekToMouse(e);
+      }
     });
 
     window.addEventListener('mousemove', (e) => {
-      if (isDragging) seekTimeline(e);
-    });
+      const rect = timelineWrapper.getBoundingClientRect();
 
-    window.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
+      // Update hover cursor
+      const hitIdx = getMarkerIndexAtPos(e.clientX);
+      if (hitIdx !== null || draggedMarkerIdx !== null) {
+        timelineWrapper.style.cursor = 'ew-resize';
+        hoveredMarkerIdx = (draggedMarkerIdx !== null) ? draggedMarkerIdx : hitIdx;
+      } else {
+        timelineWrapper.style.cursor = 'pointer';
+        hoveredMarkerIdx = null;
+      }
 
-    // Add Marker at Current Playhead Position
-    function addMarker() {
-      if (activeWordIndex >= words.length) return;
+      if (draggedMarkerIdx !== null && video.duration) {
+        const mouseX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+        const newTimeMs = Math.round((mouseX / rect.width) * video.duration * 1000);
 
-      const currentMs = Math.round(video.currentTime * 1000);
-      markers[activeWordIndex] = currentMs;
-      activeWordIndex++;
+        // Update marker timestamp live
+        currentState.markers[draggedMarkerIdx] = newTimeMs;
+        // Keep markers sorted
+        currentState.markers.sort((a, b) => a - b);
+        // Find new index of dragged marker after sort
+        draggedMarkerIdx = currentState.markers.indexOf(newTimeMs);
 
-      renderWords();
-      updateOutput();
-      drawTimeline();
-    }
-
-    function undoMarker() {
-      if (activeWordIndex > 0) {
-        activeWordIndex--;
-        markers.pop();
         renderWords();
         updateOutput();
         drawTimeline();
+      } else if (isScrubbing) {
+        seekToMouse(e);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (draggedMarkerIdx !== null) {
+        pushState(currentState);
+        draggedMarkerIdx = null;
+      }
+      isScrubbing = false;
+    });
+
+    function seekToMouse(e) {
+      if (!video.duration) return;
+      const rect = timelineWrapper.getBoundingClientRect();
+      const clickX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      video.currentTime = (clickX / rect.width) * video.duration;
+    }
+
+    // --- Marker Action: Press 'A' ---
+    function addMarkerAtCurrentTime() {
+      if (currentState.markers.length >= words.length) return;
+
+      const currentMs = Math.round(video.currentTime * 1000);
+      const nextState = JSON.parse(JSON.stringify(currentState));
+      nextState.markers.push(currentMs);
+      nextState.markers.sort((a, b) => a - b);
+
+      pushState(nextState);
+    }
+
+    // --- Input Text Reset & Ctrl+Z Handler ---
+    sentenceInput.addEventListener('blur', handleSentenceChange);
+    sentenceInput.addEventListener('change', handleSentenceChange);
+
+    function handleSentenceChange() {
+      const newText = sentenceInput.value.trim();
+      if (newText !== currentState.sentence) {
+        // Leaving or changing text resets markers, but pushes to Undo stack
+        pushState({
+          sentence: newText,
+          markers: []
+        });
       }
     }
 
-    // Calculate Relative Intervals for Anki Script
-    function calculateIntervals() {
-      if (markers.length === 0) return '0';
+    // Hotkeys Listener
+    window.addEventListener('keydown', (e) => {
+      // Don't trigger hotkeys if typing inside text input
+      if (document.activeElement === sentenceInput) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      } else if (e.code === 'KeyA') {
+        e.preventDefault();
+        addMarkerAtCurrentTime();
+      } else if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      }
+    });
+
+    function togglePlay() {
+      if (video.paused) {
+        video.play();
+      } else {
+        video.pause();
+      }
+    }
+
+    btnPlay.addEventListener('click', togglePlay);
+
+    // --- Relative Interval Calculation for Output ---
+    function calculateIntervals(markers) {
+      if (!markers || markers.length === 0) return '0';
       return markers.map((ms, idx) => {
         if (idx === 0) return ms;
         return Math.max(0, ms - markers[idx - 1]);
@@ -486,71 +692,46 @@
     }
 
     function updateOutput() {
-      outputTimings.textContent = calculateIntervals();
+      outputTimings.textContent = calculateIntervals(currentState.markers);
     }
 
-    // Render Word Chips UI
+    // --- Render Word Progress Chips ---
     function renderWords() {
       wordsContainer.innerHTML = '';
       words.forEach((word, idx) => {
         const chip = document.createElement('div');
         let className = 'word-chip';
-        if (idx === activeWordIndex) className += ' active';
-        if (markers[idx] !== undefined) className += ' marked';
+        if (currentState.markers[idx] !== undefined) className += ' marked';
 
         chip.className = className;
         chip.innerHTML = `
           <span>${word}</span>
-          ${markers[idx] !== undefined ? `<span class="time-tag">${(markers[idx] / 1000).toFixed(2)}s</span>` : ''}
+          ${currentState.markers[idx] !== undefined ? `<span class="time-tag">${(currentState.markers[idx] / 1000).toFixed(2)}s</span>` : ''}
         `;
 
-        // Click word to make active or seek
         chip.addEventListener('click', () => {
-          if (markers[idx] !== undefined) {
-            video.currentTime = markers[idx] / 1000;
+          if (currentState.markers[idx] !== undefined) {
+            video.currentTime = currentState.markers[idx] / 1000;
           }
-          activeWordIndex = idx;
-          renderWords();
         });
 
         wordsContainer.appendChild(chip);
       });
     }
 
-    // Hotkeys (Space for Play/Pause, M for Marker)
-    window.addEventListener('keydown', (e) => {
-      // Don't trigger shortcuts when typing in input box
-      if (document.activeElement === sentenceInput) return;
-
-      if (e.code === 'Space') {
-        e.preventDefault();
-        if (video.paused) {
-          video.play();
-        } else {
-          video.pause();
-        }
-      } else if (e.code === 'KeyM') {
-        e.preventDefault();
-        addMarker();
-      } else if (e.code === 'KeyZ') {
-        e.preventDefault();
-        undoMarker();
-      }
-    });
-
-    // Copy Button Action
+    // --- Copy Button ---
     btnCopy.addEventListener('click', () => {
-      const resultStr = outputTimings.textContent;
-      navigator.clipboard.writeText(resultStr).then(() => {
+      navigator.clipboard.writeText(outputTimings.textContent).then(() => {
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 2000);
       });
     });
 
-    btnParse.addEventListener('click', parseSentence);
-
-    // Initial Kickoff
-    parseSentence();
+    // Initial Setup
+    pushState({
+      sentence: sentenceInput.value.trim(),
+      markers: []
+    });
     resizeCanvas();
   </script>
 </body>
