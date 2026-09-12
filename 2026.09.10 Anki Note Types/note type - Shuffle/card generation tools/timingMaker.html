@@ -1,9 +1,9 @@
-<!-- timingMaker.html - do not delete this line nor modify. v3 -->
+<!-- timingMaker.html - do not delete this line nor modify. v4 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Anki Timing Generator v2</title>
+  <title>Anki Timing Generator v4</title>
   <style>
     :root {
       --bg: #0d0f14;
@@ -43,11 +43,12 @@
       gap: 8px;
     }
 
-    /* Two-Column App Layout */
+    /* Two-Column Equal Height Layout */
     .app-layout {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 20px;
+      align-items: stretch;
     }
 
     @media (max-width: 900px) {
@@ -55,34 +56,56 @@
       .col-timeline { grid-column: 1 / -1 !important; }
     }
 
+    .col-left {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .col-left .card.video-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin-bottom: 0;
+    }
+
+    .col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
     .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 18px;
-      margin-bottom: 16px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.25);
     }
 
     /* Timeline spanning full 2 columns */
     .col-timeline {
       grid-column: 1 / -1;
+      margin-top: 20px;
     }
 
-    /* Left Column Elements */
+    /* Video Player Container - Expands to match right column height */
     .video-container {
+      flex: 1;
       display: flex;
+      align-items: center;
       justify-content: center;
       background: #000;
       border-radius: 8px;
       overflow: hidden;
-      max-height: 320px;
+      min-height: 260px;
       margin-bottom: 14px;
     }
 
     video {
-      max-height: 320px;
-      width: auto;
+      max-height: 100%;
+      width: 100%;
+      object-fit: contain;
     }
 
     .timeline-wrapper {
@@ -107,7 +130,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     label {
@@ -172,21 +195,52 @@
       display: inline-block;
     }
 
+    /* Stats Panel Styling */
+    .stats-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      background: #0e1017;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+    }
+
+    .stat-box {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-title {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .stat-value {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: var(--accent);
+      font-family: monospace;
+    }
+
     /* Word Chips */
     .words-container {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 10px;
-      min-height: 60px;
+      margin-top: 6px;
+      min-height: 50px;
     }
 
     .word-chip {
       background: #1f2533;
       border: 1px solid var(--border);
-      padding: 8px 14px;
+      padding: 6px 12px;
       border-radius: 20px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -264,7 +318,7 @@
 <body>
 
   <header>
-    <h1>🎬 Anki Timing Generator v2</h1>
+    <h1>🎬 Anki Timing Generator v4</h1>
     <label class="file-upload-btn">
       📁 Load Media File
       <input type="file" id="media-file" accept="video/*,audio/*">
@@ -273,9 +327,9 @@
 
   <div class="app-layout">
     
-    <!-- LEFT COLUMN: Video Preview -->
+    <!-- LEFT COLUMN: Video Preview matching Right Column Height -->
     <div class="col-left">
-      <div class="card" style="padding: 12px;">
+      <div class="card video-card">
         <div class="video-container">
           <video id="video-preview" playsinline></video>
         </div>
@@ -287,16 +341,27 @@
       </div>
     </div>
 
-    <!-- RIGHT COLUMN: Sentence, Word Chips, Timings Output -->
+    <!-- RIGHT COLUMN: Sentence, Stats, Word Chips, Timings Output -->
     <div class="col-right">
       <div class="card">
         <div class="form-group">
           <label for="sentence-input">Sentence Text</label>
           <input type="text" id="sentence-input" value="You live to see this world crumble to dust and blow away.">
-          <span style="font-size: 0.75rem; color: var(--text-muted);">Exiting or changing text resets markers (Use <kbd>Ctrl+Z</kbd> to restore).</span>
         </div>
 
-        <div class="form-group">
+        <!-- Live Stats Box -->
+        <div class="stats-container">
+          <div class="stat-box">
+            <span class="stat-title">Word Count</span>
+            <span class="stat-value" id="stat-word-count">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-title">Template Words Count</span>
+            <span class="stat-value" id="stat-template-words">0</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
           <label>Word Timing Progress</label>
           <div class="words-container" id="words-container"></div>
         </div>
@@ -364,6 +429,8 @@
     const btnPlay = document.getElementById('btn-play');
     const btnCopy = document.getElementById('btn-copy');
     const toast = document.getElementById('toast');
+    const statWordCount = document.getElementById('stat-word-count');
+    const statTemplateWords = document.getElementById('stat-template-words');
 
     // --- State Stack Management ---
     function pushState(newState) {
@@ -396,12 +463,37 @@
         sentenceInput.value = currentState.sentence;
       }
       words = currentState.sentence ? currentState.sentence.split(/\s+/).filter(Boolean) : [];
+      
+      updateStats();
       renderWords();
       
       if (document.activeElement !== outputTimings) {
         updateOutput();
       }
       drawTimeline();
+    }
+
+    // --- Calculate & Update Statistics ---
+    function updateStats() {
+      const wordCount = words.length;
+      statWordCount.textContent = wordCount;
+
+      let templateWordsCount = 1;
+      let lastWordNote = "";
+
+      if (wordCount === 0) {
+        templateWordsCount = 0;
+      } else if (wordCount <= 5) {
+        templateWordsCount = 2;
+        lastWordNote = " (Last word = 0)";
+      } else if (wordCount >= 12) {
+        templateWordsCount = 2;
+      } else {
+        // Word count 6 to 11
+        templateWordsCount = 1;
+      }
+
+      statTemplateWords.textContent = templateWordsCount + lastWordNote;
     }
 
     // --- Resize Canvas ---
@@ -569,7 +661,7 @@
       const clickY = clientY - rect.top;
       const duration = video.duration;
 
-      // Only draggable if click is inside the top house shape region (Y <= 28px)
+      // Only draggable if click is inside top house shape region (Y <= 28px)
       if (clickY > 28) return null;
 
       for (let i = 0; i < currentState.markers.length; i++) {
@@ -650,16 +742,17 @@
       pushState(nextState);
     }
 
-    // --- Input Text Reset & Handler ---
-    sentenceInput.addEventListener('blur', handleSentenceChange);
+    // --- Input Text Change Handler (MARKERS ARE PRESERVED) ---
+    sentenceInput.addEventListener('input', handleSentenceChange);
     sentenceInput.addEventListener('change', handleSentenceChange);
 
     function handleSentenceChange() {
       const newText = sentenceInput.value.trim();
       if (newText !== currentState.sentence) {
+        // Update sentence and words, KEEP existing markers
         pushState({
           sentence: newText,
-          markers: []
+          markers: currentState.markers
         });
       }
     }
