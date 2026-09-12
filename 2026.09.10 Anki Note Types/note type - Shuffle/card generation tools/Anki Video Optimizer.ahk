@@ -1,4 +1,4 @@
-; Anki Video Optimizer.ahk - do not delete or modify this line. v1
+; Anki Video Optimizer.ahk - do not delete or modify this line. v2
 #Requires AutoHotkey v2.0
 
 ; --- CONFIGURATION ---
@@ -7,7 +7,7 @@
 ffmpegPath := "ffmpeg.exe"
 
 ; --- GUI SETUP ---
-myGui := Gui("+AlwaysOnTop", "Anki Video Optimizer")
+myGui := Gui("+AlwaysOnTop", "Anki Video Optimizer (WebM)")
 myGui.SetFont("s10", "Segoe UI")
 myGui.Add("Text", "w320 Center", "Drag & drop a video file here`nor click the button below:")
 btnSelect := myGui.Add("Button", "w320 h35", "Select Video File")
@@ -31,15 +31,16 @@ OnDropFiles(guiObj, dropTarget, files, x, y) {
 
 ProcessVideo(inputFile) {
     SplitPath(inputFile, &fileName, &dir, &ext, &nameNoExt)
-    outputFile := dir . "\" . nameNoExt . "_anki.mp4"
+    outputFile := dir . "\" . nameNoExt . "_anki.webm"
 
-    ; Recommended Anki Target Command (720p, CRF 26, AAC 96k)
+    ; Converts to WebM (720p, VP9 Video, Opus Audio) matching target MediaInfo specs
     cmd := '"' . ffmpegPath . '" -i "' . inputFile .
-        '" -vf "scale=-2:720" -c:v libx264 -crf 26 -preset faster -c:a aac -b:a 96k -y "' . outputFile . '"'
+        '" -vf "scale=-2:720" -c:v libvpx-vp9 -crf 32 -b:v 0 -row-mt 1 -pix_fmt yuv420p -c:a libopus -b:a 96k -y "' .
+        outputFile . '"'
 
-    ToolTip("Compressing video for Anki...")
+    ToolTip("Compressing video to WebM for Anki...")
     RunWait(A_ComSpec . ' /c "' . cmd . '"', , "Hide")
     ToolTip()
 
-    MsgBox("Done! Optimized file saved to:`n" . outputFile, "Anki Video Optimizer", "Iconi")
+    MsgBox("Done! Optimized WebM saved to:`n" . outputFile, "Anki Video Optimizer", "Iconi")
 }
