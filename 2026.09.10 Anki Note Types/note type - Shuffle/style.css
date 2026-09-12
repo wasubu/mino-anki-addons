@@ -164,15 +164,6 @@
   background: #7f8c8d;
 }
 
-/* Night Mode Support */
-.nightMode .card { background-color: #1e1e1e; color: #ecf0f1; }
-.nightMode .word-box { background: #2d2d2d; border-color: #444; }
-.nightMode .source-box { background: #252525; }
-.nightMode .chip-placeholder { background: #3a3a3a; border-color: #555; }
-.nightMode .translation-hint { color: #ecf0f1; }
-.nightMode .target-box.correct { background-color: #1b382b; border-color: #2ecc71; }
-.nightMode .target-box.incorrect { background-color: #3d1f1d; border-color: #e74c3c; }
-
 /* Responsive Video Support inside Translation */
 .translation-hint video {
   max-width: 100%;
@@ -190,24 +181,27 @@
   margin-top: 8px;
 }
 
-/* --- Back Card Overrides & Button Controls --- */
+/* --- Back Card Word Chip Overrides --- */
 .shuffle-container .word-chip.chip-match {
   background: #e8f5e9 !important;
   color: #2e7d32 !important;
   border: 1px solid #a5d6a7 !important;
 }
+
 .shuffle-container .word-chip.chip-mismatch {
   background: #ffebee !important;
   color: #c62828 !important;
   border: 1px solid #ef9a9a !important;
   text-decoration: line-through;
 }
+
 .shuffle-container .word-chip.chip-dummy {
   background: #f3e5f5 !important;
   color: #7b1fa2 !important;
   border: 1px solid #ce93d8 !important;
   text-decoration: line-through;
 }
+
 .shuffle-container .word-chip.chip-missing {
   background: #fff8e1 !important;
   color: #b78103 !important;
@@ -215,22 +209,60 @@
   font-weight: 600;
 }
 
-.shuffle-container .word-chip.timing-active,
-.shuffle-container .word-chip.timing-active:hover,
-.shuffle-container .word-chip.timing-active:active,
-.nightMode .shuffle-container .word-chip.timing-active,
-.nightMode .shuffle-container .word-chip.timing-active:hover {
-  background: #1976d2 !important;
-  background-color: #1976d2 !important;
-  color: #ffffff !important;
-  border: 1px solid #1565c0 !important;
-  box-shadow: none !important;
-  text-decoration: none !important;
-  transform: scale(1.08) !important;
+/* --- Base Active Timing Highlight Animation (No Borders / Outlines) --- */
+.shuffle-container .word-chip.timing-active {
+  transform: scale(1.1) !important;
   opacity: 1 !important;
   z-index: 10 !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+  text-decoration: none !important;
+  transition: transform 0.15s ease, background-color 0.15s ease !important;
 }
 
+/* 1. Correct / Matched Words (GREEN) */
+.shuffle-container .word-chip.chip-match.timing-active {
+  background: #2e7d32 !important;
+  color: #ffffff !important;
+  border: none !important;
+  outline: none !important;
+}
+
+/* 2. Misplaced / Incorrect Words (RED) */
+.shuffle-container .word-chip.chip-mismatch.timing-active {
+  background: #e74c3c !important;
+  color: #ffffff !important;
+  border: none !important;
+  outline: none !important;
+}
+
+/* 3. Dummy / Extra Words (PURPLE) */
+.shuffle-container .word-chip.chip-dummy.timing-active {
+  background: #8e44ad !important;
+  color: #ffffff !important;
+  border: none !important;
+  outline: none !important;
+}
+
+/* 4. Missing / Wordbank Words (YELLOW) */
+.shuffle-container .word-chip.chip-missing.timing-active,
+#source-box .word-chip.timing-active {
+  background: #f39c12 !important;
+  color: #ffffff !important;
+  border: none !important;
+  outline: none !important;
+}
+
+/* Default Fallback for Unclassified Target Chips */
+.shuffle-container .word-chip.timing-active:not(.chip-match):not(.chip-mismatch):not(.chip-dummy):not(.chip-missing) {
+  background: #1976d2 !important;
+  color: #ffffff !important;
+  border: none !important;
+  outline: none !important;
+}
+
+/* --- Show Answer Controls --- */
 .shuffle-container .btn-show-answer {
   display: block;
   width: 100%;
@@ -250,6 +282,7 @@
   color: #2e7d32 !important;
   border: 2px solid #2e7d32 !important;
 }
+
 .shuffle-container .btn-show-answer.green-state:hover {
   background: #c8e6c9 !important;
 }
@@ -259,6 +292,7 @@
   color: #1976d2 !important;
   border: 2px solid #1976d2 !important;
 }
+
 .shuffle-container .btn-show-answer.blue-state:hover {
   background: #bbdefb !important;
 }
@@ -266,8 +300,94 @@
 .shuffle-container .btn-show-answer:active {
   transform: scale(0.98);
 }
+
 .shuffle-container .btn-show-answer:disabled {
   opacity: 0.5;
   cursor: default;
   transform: none;
+}
+
+/* --- Night Mode Support --- */
+.nightMode .card { background-color: #1e1e1e; color: #ecf0f1; }
+.nightMode .word-box { background: #2d2d2d; border-color: #444; }
+.nightMode .source-box { background: #252525; }
+.nightMode .chip-placeholder { background: #3a3a3a; border-color: #555; }
+.nightMode .translation-hint { color: #ecf0f1; }
+.nightMode .target-box.correct { background-color: #1b382b; border-color: #2ecc71; }
+.nightMode .target-box.incorrect { background-color: #3d1f1d; border-color: #e74c3c; }
+
+/* Night Mode Back-Card Chips */
+.nightMode .shuffle-container .word-chip.chip-match {
+  background: #1b382b !important;
+  color: #81c784 !important;
+  border: 1px solid #2ecc71 !important;
+}
+
+.nightMode .shuffle-container .word-chip.chip-mismatch {
+  background: #3d1f1d !important;
+  color: #ef9a9a !important;
+  border: 1px solid #e74c3c !important;
+}
+
+.nightMode .shuffle-container .word-chip.chip-dummy {
+  background: #3a1c42 !important;
+  color: #ce93d8 !important;
+  border: 1px solid #ab47bc !important;
+}
+
+.nightMode .shuffle-container .word-chip.chip-missing {
+  background: #3d321d !important;
+  color: #ffe082 !important;
+  border: 1px solid #fbc02d !important;
+}
+
+/* Night Mode Timing Highlights (No Borders / Outlines) */
+.nightMode .shuffle-container .word-chip.chip-match.timing-active {
+  background: #2ecc71 !important;
+  color: #000000 !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.nightMode .shuffle-container .word-chip.chip-mismatch.timing-active {
+  background: #e74c3c !important;
+  color: #ffffff !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.nightMode .shuffle-container .word-chip.chip-dummy.timing-active {
+  background: #9b59b6 !important;
+  color: #ffffff !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.nightMode .shuffle-container .word-chip.chip-missing.timing-active,
+.nightMode #source-box .word-chip.timing-active {
+  background: #f1c40f !important;
+  color: #000000 !important;
+  border: none !important;
+  outline: none !important;
+}
+
+/* Night Mode Toggle Buttons */
+.nightMode .shuffle-container .btn-show-answer.green-state {
+  background: #1b382b !important;
+  color: #81c784 !important;
+  border-color: #2ecc71 !important;
+}
+
+.nightMode .shuffle-container .btn-show-answer.green-state:hover {
+  background: #254d3b !important;
+}
+
+.nightMode .shuffle-container .btn-show-answer.blue-state {
+  background: #0d47a1 !important;
+  color: #90caf9 !important;
+  border-color: #42a5f5 !important;
+}
+
+.nightMode .shuffle-container .btn-show-answer.blue-state:hover {
+  background: #1565c0 !important;
 }
