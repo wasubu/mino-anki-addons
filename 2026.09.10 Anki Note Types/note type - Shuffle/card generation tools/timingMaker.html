@@ -1,0 +1,557 @@
+<!-- timingMaker.html - do not delete this line nor modify. v1 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Anki Timing Marker Tool</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card-bg: #1a1d26;
+      --accent: #00f2fe;
+      --accent-hover: #4facfe;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border: #2e3545;
+      --marker-color: #ff4757;
+      --active-word: #2ed573;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 16px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    /* Top Form Controls */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background: #111319;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    .flex-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: var(--border);
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover { background: #3b4458; }
+    .btn-primary { background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-danger { background: #ff4757; color: #fff; }
+
+    input[type="file"] { display: none; }
+    .file-upload-btn {
+      background: #252a37;
+      border: 1px dashed var(--accent);
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--accent);
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    /* Video Preview */
+    .video-container {
+      display: flex;
+      justify-content: center;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      max-height: 320px;
+      margin-bottom: 20px;
+    }
+
+    video {
+      max-height: 320px;
+      width: auto;
+    }
+
+    /* Timeline & Waveform */
+    .timeline-wrapper {
+      position: relative;
+      width: 100%;
+      height: 140px;
+      background: #111319;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      overflow: hidden;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .hotkey-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    kbd {
+      background: var(--border);
+      color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    /* Word Chips */
+    .words-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .word-chip {
+      background: #252a37;
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .word-chip.active {
+      border-color: var(--active-word);
+      background: rgba(46, 213, 115, 0.15);
+      color: var(--active-word);
+      font-weight: bold;
+      box-shadow: 0 0 10px rgba(46, 213, 115, 0.3);
+    }
+
+    .word-chip.marked {
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .word-chip .time-tag {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-family: monospace;
+    }
+
+    /* Result Output */
+    .output-box {
+      background: #111319;
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 8px;
+      font-family: monospace;
+      color: var(--accent);
+      word-break: break-all;
+      margin-top: 10px;
+      min-height: 44px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--active-word);
+      color: #000;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <h1>🎬 Anki Timing Generator</h1>
+
+  <!-- Top Inputs -->
+  <div class="card">
+    <div class="form-group">
+      <label for="sentence-input">Sentence Text</label>
+      <input type="text" id="sentence-input" value="You live to see this world crumble to dust and blow away.">
+    </div>
+
+    <div class="flex-row">
+      <label class="file-upload-btn">
+        📁 Load Media File
+        <input type="file" id="media-file" accept="video/*,audio/*">
+      </label>
+      <span id="file-name" style="font-size: 0.9rem; color: var(--text-muted);">No file loaded</span>
+      <button class="btn" id="btn-parse" style="margin-left: auto;">Reset / Update Words</button>
+    </div>
+  </div>
+
+  <!-- Video Preview -->
+  <div class="card" style="padding: 10px;">
+    <div class="video-container">
+      <video id="video-preview" playsinline></video>
+    </div>
+
+    <!-- Timeline & Audio Waveform -->
+    <div class="timeline-wrapper" id="timeline-wrapper">
+      <canvas id="waveform-canvas"></canvas>
+    </div>
+
+    <div class="hotkey-legend">
+      <span><kbd>Space</kbd> Play / Pause</span>
+      <span><kbd>M</kbd> Mark word timestamp</span>
+      <span><kbd>Z</kbd> Undo last marker</span>
+      <span><kbd>Click/Drag Timeline</kbd> Seek Playhead</span>
+    </div>
+  </div>
+
+  <!-- Word Marking Progress -->
+  <div class="card">
+    <label>Word Markers Progress</label>
+    <div class="words-container" id="words-container"></div>
+  </div>
+
+  <!-- Output & Copy -->
+  <div class="card">
+    <div class="flex-row" style="justify-content: space-between;">
+      <label>Generated {{Timings}} String</label>
+      <button class="btn btn-primary" id="btn-copy">📋 Copy {{Timings}} to Clipboard</button>
+    </div>
+    <div class="output-box" id="output-timings">0</div>
+  </div>
+
+  <div class="toast" id="toast">Copied to Clipboard!</div>
+
+  <script>
+    // State variables
+    let words = [];
+    let markers = []; // Absolute timestamps in milliseconds
+    let activeWordIndex = 0;
+    let audioBuffer = null;
+    let isDragging = false;
+
+    // Elements
+    const sentenceInput = document.getElementById('sentence-input');
+    const mediaFileInput = document.getElementById('media-file');
+    const fileNameDisplay = document.getElementById('file-name');
+    const video = document.getElementById('video-preview');
+    const canvas = document.getElementById('waveform-canvas');
+    const ctx = canvas.getContext('2d');
+    const timelineWrapper = document.getElementById('timeline-wrapper');
+    const wordsContainer = document.getElementById('words-container');
+    const outputTimings = document.getElementById('output-timings');
+    const btnParse = document.getElementById('btn-parse');
+    const btnCopy = document.getElementById('btn-copy');
+    const toast = document.getElementById('toast');
+
+    // Setup Canvas Resolution
+    function resizeCanvas() {
+      canvas.width = timelineWrapper.clientWidth * window.devicePixelRatio;
+      canvas.height = timelineWrapper.clientHeight * window.devicePixelRatio;
+      drawTimeline();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // Sentence Parsing
+    function parseSentence() {
+      const text = sentenceInput.value.trim();
+      words = text ? text.split(/\s+/).filter(Boolean) : [];
+      markers = [];
+      activeWordIndex = 0;
+      renderWords();
+      updateOutput();
+      drawTimeline();
+    }
+
+    // Load Media & Extract Waveform
+    mediaFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      fileNameDisplay.textContent = file.name;
+      const fileUrl = URL.createObjectURL(file);
+      video.src = fileUrl;
+
+      // Decode audio for waveform canvas
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        drawTimeline();
+      } catch (err) {
+        console.warn('Could not extract audio waveform:', err);
+        audioBuffer = null;
+        drawTimeline();
+      }
+    });
+
+    // Render Audio Waveform + Markers + Playhead
+    function drawTimeline() {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // Background
+      ctx.fillStyle = '#111319';
+      ctx.fillRect(0, 0, w, h);
+
+      const duration = video.duration || 1;
+
+      // 1. Draw Waveform
+      if (audioBuffer) {
+        const rawData = audioBuffer.getChannelData(0);
+        const step = Math.ceil(rawData.length / w);
+        const amp = h / 2;
+
+        ctx.fillStyle = '#2e3545';
+        ctx.beginPath();
+        for (let i = 0; i < w; i++) {
+          let min = 1.0, max = -1.0;
+          for (let j = 0; j < step; j++) {
+            const datum = rawData[(i * step) + j];
+            if (datum < min) min = datum;
+            if (datum > max) max = datum;
+          }
+          ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+        }
+      }
+
+      // 2. Draw Time Grid / Markers
+      markers.forEach((ms, idx) => {
+        const x = (ms / 1000 / duration) * w;
+        ctx.strokeStyle = '#ff4757';
+        ctx.lineWidth = 2 * window.devicePixelRatio;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+
+        // Draw Word Label
+        ctx.fillStyle = '#ff4757';
+        ctx.font = `${11 * window.devicePixelRatio}px sans-serif`;
+        if (words[idx]) {
+          ctx.fillText(`${idx + 1}. ${words[idx]}`, x + 4, 16 * window.devicePixelRatio);
+        }
+      });
+
+      // 3. Draw Playhead
+      const curTime = video.currentTime || 0;
+      const playheadX = (curTime / duration) * w;
+
+      ctx.strokeStyle = '#00f2fe';
+      ctx.lineWidth = 3 * window.devicePixelRatio;
+      ctx.beginPath();
+      ctx.moveTo(playheadX, 0);
+      ctx.lineTo(playheadX, h);
+      ctx.stroke();
+
+      // Playhead Head Indicator
+      ctx.fillStyle = '#00f2fe';
+      ctx.beginPath();
+      ctx.arc(playheadX, 6 * window.devicePixelRatio, 6 * window.devicePixelRatio, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Animation Loop for Video Sync
+    function animate() {
+      drawTimeline();
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+
+    // Scrubber / Playhead Drag Interactions
+    function seekTimeline(e) {
+      if (!video.duration) return;
+      const rect = timelineWrapper.getBoundingClientRect();
+      const clickX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      const targetTime = (clickX / rect.width) * video.duration;
+      video.currentTime = targetTime;
+    }
+
+    timelineWrapper.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      seekTimeline(e);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging) seekTimeline(e);
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    // Add Marker at Current Playhead Position
+    function addMarker() {
+      if (activeWordIndex >= words.length) return;
+
+      const currentMs = Math.round(video.currentTime * 1000);
+      markers[activeWordIndex] = currentMs;
+      activeWordIndex++;
+
+      renderWords();
+      updateOutput();
+      drawTimeline();
+    }
+
+    function undoMarker() {
+      if (activeWordIndex > 0) {
+        activeWordIndex--;
+        markers.pop();
+        renderWords();
+        updateOutput();
+        drawTimeline();
+      }
+    }
+
+    // Calculate Relative Intervals for Anki Script
+    function calculateIntervals() {
+      if (markers.length === 0) return '0';
+      return markers.map((ms, idx) => {
+        if (idx === 0) return ms;
+        return Math.max(0, ms - markers[idx - 1]);
+      }).join(', ');
+    }
+
+    function updateOutput() {
+      outputTimings.textContent = calculateIntervals();
+    }
+
+    // Render Word Chips UI
+    function renderWords() {
+      wordsContainer.innerHTML = '';
+      words.forEach((word, idx) => {
+        const chip = document.createElement('div');
+        let className = 'word-chip';
+        if (idx === activeWordIndex) className += ' active';
+        if (markers[idx] !== undefined) className += ' marked';
+
+        chip.className = className;
+        chip.innerHTML = `
+          <span>${word}</span>
+          ${markers[idx] !== undefined ? `<span class="time-tag">${(markers[idx] / 1000).toFixed(2)}s</span>` : ''}
+        `;
+
+        // Click word to make active or seek
+        chip.addEventListener('click', () => {
+          if (markers[idx] !== undefined) {
+            video.currentTime = markers[idx] / 1000;
+          }
+          activeWordIndex = idx;
+          renderWords();
+        });
+
+        wordsContainer.appendChild(chip);
+      });
+    }
+
+    // Hotkeys (Space for Play/Pause, M for Marker)
+    window.addEventListener('keydown', (e) => {
+      // Don't trigger shortcuts when typing in input box
+      if (document.activeElement === sentenceInput) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (video.paused) {
+          video.play();
+        } else {
+          video.pause();
+        }
+      } else if (e.code === 'KeyM') {
+        e.preventDefault();
+        addMarker();
+      } else if (e.code === 'KeyZ') {
+        e.preventDefault();
+        undoMarker();
+      }
+    });
+
+    // Copy Button Action
+    btnCopy.addEventListener('click', () => {
+      const resultStr = outputTimings.textContent;
+      navigator.clipboard.writeText(resultStr).then(() => {
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+      });
+    });
+
+    btnParse.addEventListener('click', parseSentence);
+
+    // Initial Kickoff
+    parseSentence();
+    resizeCanvas();
+  </script>
+</body>
+</html>
