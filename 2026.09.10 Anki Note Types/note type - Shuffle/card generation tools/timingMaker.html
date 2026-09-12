@@ -1,9 +1,9 @@
-<!-- timingMaker.html - do not delete this line nor modify. v4 -->
+<!-- timingMaker.html - do not delete this line nor modify. v5 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Anki Timing Generator v4</title>
+  <title>Anki Timing Generator v5</title>
   <style>
     :root {
       --bg: #0d0f14;
@@ -89,7 +89,7 @@
       margin-top: 20px;
     }
 
-    /* Video Player Container - Expands to match right column height */
+    /* Video Player Container */
     .video-container {
       flex: 1;
       display: flex;
@@ -198,7 +198,7 @@
     /* Stats Panel Styling */
     .stats-container {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 10px;
       background: #0e1017;
       border: 1px solid var(--border);
@@ -213,7 +213,7 @@
     }
 
     .stat-title {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       color: var(--text-muted);
       text-transform: uppercase;
       font-weight: 700;
@@ -256,6 +256,13 @@
       border-color: #2ed573;
       box-shadow: 0 0 12px rgba(46, 213, 115, 0.5);
       transform: scale(1.05);
+    }
+
+    /* Hover Highlight linked with Marker */
+    .word-chip.hover-highlight {
+      border-color: #ff6b81;
+      background: #2a1f2d;
+      box-shadow: 0 0 10px rgba(255, 107, 129, 0.4);
     }
 
     .word-chip.marked {
@@ -318,7 +325,7 @@
 <body>
 
   <header>
-    <h1>🎬 Anki Timing Generator v4</h1>
+    <h1>🎬 Anki Timing Generator v5</h1>
     <label class="file-upload-btn">
       📁 Load Media File
       <input type="file" id="media-file" accept="video/*,audio/*">
@@ -356,8 +363,12 @@
             <span class="stat-value" id="stat-word-count">0</span>
           </div>
           <div class="stat-box">
-            <span class="stat-title">Template Words Count</span>
-            <span class="stat-value" id="stat-template-words">0</span>
+            <span class="stat-title">Dummy Count</span>
+            <span class="stat-value" id="stat-dummy-count">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-title">LAST WORDS PUT</span>
+            <span class="stat-value" id="stat-put-last-word">0</span>
           </div>
         </div>
 
@@ -415,6 +426,7 @@
     let draggedMarkerIdx = null;
     let isScrubbing = false;
     let hoveredMarkerIdx = null;
+    let hoveredWordIdx = null;
 
     // Elements
     const sentenceInput = document.getElementById('sentence-input');
@@ -430,13 +442,12 @@
     const btnCopy = document.getElementById('btn-copy');
     const toast = document.getElementById('toast');
     const statWordCount = document.getElementById('stat-word-count');
-    const statTemplateWords = document.getElementById('stat-template-words');
+    const statDummyCount = document.getElementById('stat-dummy-count');
+    const statPutLastWord = document.getElementById('stat-put-last-word');
 
     // --- State Stack Management ---
     function pushState(newState) {
-      // Truncate redo path
       historyStack = historyStack.slice(0, historyIndex + 1);
-      // Deep clone
       const stateCopy = JSON.parse(JSON.stringify(newState));
       historyStack.push(stateCopy);
       historyIndex = historyStack.length - 1;
@@ -478,22 +489,26 @@
       const wordCount = words.length;
       statWordCount.textContent = wordCount;
 
-      let templateWordsCount = 1;
-      let lastWordNote = "";
-
       if (wordCount === 0) {
-        templateWordsCount = 0;
-      } else if (wordCount <= 5) {
-        templateWordsCount = 2;
-        lastWordNote = " (Last word = 0)";
-      } else if (wordCount >= 12) {
-        templateWordsCount = 2;
-      } else {
-        // Word count 6 to 11
-        templateWordsCount = 1;
+        statDummyCount.textContent = 0;
+        statPutLastWord.textContent = 0;
+        return;
       }
 
-      statTemplateWords.textContent = templateWordsCount + lastWordNote;
+      // Dummy Count = if word is 5 or below then 2, otherwise 1
+      const dummyCount = (wordCount <= 5) ? 2 : 1;
+      statDummyCount.textContent = dummyCount;
+
+      // Put Last Word = 0 if none or <= 5; 1 if 6-11; 2 if 12+
+      let putLastWord = 0;
+      if (wordCount >= 13) {
+        putLastWord = 2;
+      } else if (wordCount >= 6) {
+        putLastWord = 1;
+      } else {
+        putLastWord = 0;
+      }
+      statPutLastWord.textContent = putLastWord;
     }
 
     // --- Resize Canvas ---
@@ -577,27 +592,27 @@
       // 2. Draw Draggable House Markers
       currentState.markers.forEach((ms, idx) => {
         const x = (ms / 1000 / duration) * w;
-        const isHovered = (hoveredMarkerIdx === idx || draggedMarkerIdx === idx);
+        const isHovered = (hoveredMarkerIdx === idx || draggedMarkerIdx === idx || hoveredWordIdx === idx);
 
         // Vertical Guide Line
         ctx.strokeStyle = isHovered ? '#ff6b81' : '#ff4757';
-        ctx.lineWidth = 2 * scale;
+        ctx.lineWidth = (isHovered ? 3 : 2) * scale;
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, h);
         ctx.stroke();
 
         // Upside-Down House Marker Handle at Top
-        const markerWidth = 16 * scale;
-        const markerHeight = 26 * scale;
+        const markerWidth = (isHovered ? 18 : 16) * scale;
+        const markerHeight = (isHovered ? 28 : 26) * scale;
         const roofHeight = 10 * scale;
-        drawUpsideDownHouse(x, 0, markerWidth, markerHeight, roofHeight, isHovered ? '#ff6b81' : '#ff4757', isHovered);
+        drawUpsideDownHouse(x, 2 * scale, markerWidth, markerHeight, roofHeight, isHovered ? '#ff6b81' : '#ff4757', isHovered);
 
         // Marker Label Number
         ctx.fillStyle = '#ffffff';
         ctx.font = `bold ${9.5 * scale}px sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillText(idx + 1, x, 12 * scale);
+        ctx.fillText(idx + 1, x, 14 * scale);
       });
 
       // 3. Playhead Line
@@ -650,10 +665,17 @@
         } else {
           chip.classList.remove('timing-active');
         }
+
+        // Also add hover highlight if linked marker or word is hovered
+        if (hoveredMarkerIdx === idx || hoveredWordIdx === idx) {
+          chip.classList.add('hover-highlight');
+        } else {
+          chip.classList.remove('hover-highlight');
+        }
       });
     }
 
-    // --- Hit-Test ONLY Upside-Down House Shape at Top ---
+    // --- Strict Hit-Test ONLY for Upside-Down House Top Region ---
     function getHouseHandleIndexAtPos(clientX, clientY) {
       if (!video.duration) return null;
       const rect = timelineWrapper.getBoundingClientRect();
@@ -661,8 +683,8 @@
       const clickY = clientY - rect.top;
       const duration = video.duration;
 
-      // Only draggable if click is inside top house shape region (Y <= 28px)
-      if (clickY > 28) return null;
+      // Strict boundaries: Handle is strictly between y=0 and y=28px inside canvas
+      if (clickY < 0 || clickY > 28) return null;
 
       for (let i = 0; i < currentState.markers.length; i++) {
         const markerX = (currentState.markers[i] / 1000 / duration) * rect.width;
@@ -677,6 +699,11 @@
       const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
       if (hitIdx !== null) {
         draggedMarkerIdx = hitIdx;
+        
+        // PAUSE VIDEO ON DRAG TO PREVENT STUTTER
+        if (!video.paused) {
+          video.pause();
+        }
       } else {
         isScrubbing = true;
         seekToMouse(e);
@@ -702,9 +729,7 @@
 
         // Update marker timestamp live
         currentState.markers[draggedMarkerIdx] = newTimeMs;
-        // Keep markers sorted
         currentState.markers.sort((a, b) => a - b);
-        // Find new index of dragged marker after sort
         draggedMarkerIdx = currentState.markers.indexOf(newTimeMs);
 
         renderWords();
@@ -742,14 +767,13 @@
       pushState(nextState);
     }
 
-    // --- Input Text Change Handler (MARKERS ARE PRESERVED) ---
+    // --- Input Text Change Handler (MARKERS PRESERVED) ---
     sentenceInput.addEventListener('input', handleSentenceChange);
     sentenceInput.addEventListener('change', handleSentenceChange);
 
     function handleSentenceChange() {
       const newText = sentenceInput.value.trim();
       if (newText !== currentState.sentence) {
-        // Update sentence and words, KEEP existing markers
         pushState({
           sentence: newText,
           markers: currentState.markers
@@ -773,7 +797,6 @@
       const intervals = inputVal.split(',').map(v => parseInt(v.trim(), 10)).filter(n => !isNaN(n));
       if (intervals.length === 0) return;
 
-      // Reconstruct absolute timestamps from relative intervals
       let cumulativeMs = 0;
       const newMarkers = [];
       for (let i = 0; i < intervals.length; i++) {
@@ -789,7 +812,6 @@
 
     // Hotkeys Listener
     window.addEventListener('keydown', (e) => {
-      // Don't trigger hotkeys if typing inside text inputs
       if (document.activeElement === sentenceInput || document.activeElement === outputTimings) return;
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -849,6 +871,17 @@
           if (currentState.markers[idx] !== undefined) {
             video.currentTime = currentState.markers[idx] / 1000;
           }
+        });
+
+        // Hover word chip highlights corresponding timeline marker
+        chip.addEventListener('mouseenter', () => {
+          hoveredWordIdx = idx;
+          drawTimeline();
+        });
+
+        chip.addEventListener('mouseleave', () => {
+          hoveredWordIdx = null;
+          drawTimeline();
         });
 
         wordsContainer.appendChild(chip);
