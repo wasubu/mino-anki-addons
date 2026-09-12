@@ -1,4 +1,4 @@
-<!-- timingMaker.html - do not delete this line nor modify. v2 -->
+<!-- timingMaker.html - do not delete this line nor modify. v3 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -46,12 +46,13 @@
     /* Two-Column App Layout */
     .app-layout {
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
+      grid-template-columns: 1fr 1fr;
       gap: 20px;
     }
 
     @media (max-width: 900px) {
       .app-layout { grid-template-columns: 1fr; }
+      .col-timeline { grid-column: 1 / -1 !important; }
     }
 
     .card {
@@ -63,6 +64,11 @@
       box-shadow: 0 8px 24px rgba(0,0,0,0.25);
     }
 
+    /* Timeline spanning full 2 columns */
+    .col-timeline {
+      grid-column: 1 / -1;
+    }
+
     /* Left Column Elements */
     .video-container {
       display: flex;
@@ -70,19 +76,19 @@
       background: #000;
       border-radius: 8px;
       overflow: hidden;
-      max-height: 340px;
+      max-height: 320px;
       margin-bottom: 14px;
     }
 
     video {
-      max-height: 340px;
+      max-height: 320px;
       width: auto;
     }
 
     .timeline-wrapper {
       position: relative;
       width: 100%;
-      height: 150px;
+      height: 160px;
       background: #0a0c10;
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -172,7 +178,7 @@
       flex-wrap: wrap;
       gap: 8px;
       margin-top: 10px;
-      min-height: 80px;
+      min-height: 60px;
     }
 
     .word-chip {
@@ -212,24 +218,18 @@
       font-family: monospace;
     }
 
-    /* Output Section */
-    .output-box {
-      background: #0e1017;
-      border: 1px solid var(--border);
-      padding: 12px;
-      border-radius: 8px;
+    /* Editable Output Box */
+    input.output-box {
       font-family: monospace;
       color: var(--accent);
-      word-break: break-all;
-      margin-top: 10px;
-      min-height: 44px;
+      font-weight: 600;
     }
 
     .hotkey-legend {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
-      margin-top: 12px;
+      margin-top: 8px;
       font-size: 0.82rem;
       color: var(--text-muted);
     }
@@ -242,10 +242,11 @@
       font-family: monospace;
     }
 
+    /* Toast Notifier Positioned Bottom Left */
     .toast {
       position: fixed;
       bottom: 20px;
-      right: 20px;
+      left: 20px;
       background: var(--active-word);
       color: #000;
       padding: 12px 24px;
@@ -255,6 +256,7 @@
       transition: opacity 0.3s ease;
       pointer-events: none;
       z-index: 999;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
     }
     .toast.show { opacity: 1; }
   </style>
@@ -271,19 +273,14 @@
 
   <div class="app-layout">
     
-    <!-- LEFT COLUMN: Media & Timeline Canvas -->
+    <!-- LEFT COLUMN: Video Preview -->
     <div class="col-left">
       <div class="card" style="padding: 12px;">
         <div class="video-container">
           <video id="video-preview" playsinline></video>
         </div>
 
-        <!-- Waveform & Marker Drag Timeline -->
-        <div class="timeline-wrapper" id="timeline-wrapper">
-          <canvas id="waveform-canvas"></canvas>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
           <button class="btn" id="btn-play">▶ Play / Pause</button>
           <span id="file-name" style="font-size: 0.85rem; color: var(--text-muted);">No file loaded</span>
         </div>
@@ -296,7 +293,7 @@
         <div class="form-group">
           <label for="sentence-input">Sentence Text</label>
           <input type="text" id="sentence-input" value="You live to see this world crumble to dust and blow away.">
-          <span style="font-size: 0.75rem; color: var(--text-muted);">Editing or unfocusing text resets markers (Use <kbd>Ctrl+Z</kbd> to restore).</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Exiting or changing text resets markers (Use <kbd>Ctrl+Z</kbd> to restore).</span>
         </div>
 
         <div class="form-group">
@@ -306,20 +303,30 @@
       </div>
 
       <div class="card">
-        <div class="flex-row" style="justify-content: space-between;">
-          <label>Generated {{Timings}} String</label>
+        <div class="flex-row" style="justify-content: space-between; margin-bottom: 8px;">
+          <label for="output-timings">Generated {{Timings}} String</label>
           <button class="btn btn-primary" id="btn-copy">📋 Copy {{Timings}}</button>
         </div>
-        <div class="output-box" id="output-timings">0</div>
+        <input type="text" class="output-box" id="output-timings" value="0">
+        <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">Edit values directly and press Enter or exit box to update timeline.</span>
       </div>
+    </div>
 
+    <!-- SPANNING TWO COLUMNS: Audio Waveform & Draggable Timeline -->
+    <div class="col-timeline">
       <div class="card" style="padding: 14px;">
-        <label>Shortcuts</label>
+        <label style="margin-bottom: 8px; display: block;">Audio Waveform & Markers Timeline</label>
+        
+        <div class="timeline-wrapper" id="timeline-wrapper">
+          <canvas id="waveform-canvas"></canvas>
+        </div>
+
         <div class="hotkey-legend">
           <span><kbd>Space</kbd> Play / Pause</span>
           <span><kbd>A</kbd> Add Marker</span>
+          <span><kbd>Drag House Handle</kbd> Reposition Marker</span>
+          <span><kbd>Click Waveform</kbd> Seek Video</span>
           <span><kbd>Ctrl + Z</kbd> Undo / Revert</span>
-          <span><kbd>Drag Marker</kbd> Reposition</span>
         </div>
       </div>
     </div>
@@ -390,7 +397,10 @@
       }
       words = currentState.sentence ? currentState.sentence.split(/\s+/).filter(Boolean) : [];
       renderWords();
-      updateOutput();
+      
+      if (document.activeElement !== outputTimings) {
+        updateOutput();
+      }
       drawTimeline();
     }
 
@@ -486,16 +496,16 @@
         ctx.stroke();
 
         // Upside-Down House Marker Handle at Top
-        const markerWidth = 14 * scale;
-        const markerHeight = 22 * scale;
-        const roofHeight = 8 * scale;
+        const markerWidth = 16 * scale;
+        const markerHeight = 26 * scale;
+        const roofHeight = 10 * scale;
         drawUpsideDownHouse(x, 0, markerWidth, markerHeight, roofHeight, isHovered ? '#ff6b81' : '#ff4757', isHovered);
 
         // Marker Label Number
         ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${9 * scale}px sans-serif`;
+        ctx.font = `bold ${9.5 * scale}px sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillText(idx + 1, x, 11 * scale);
+        ctx.fillText(idx + 1, x, 12 * scale);
       });
 
       // 3. Playhead Line
@@ -551,16 +561,20 @@
       });
     }
 
-    // --- Interactive Dragging & Seeking on Canvas ---
-    function getMarkerIndexAtPos(clientX) {
+    // --- Hit-Test ONLY Upside-Down House Shape at Top ---
+    function getHouseHandleIndexAtPos(clientX, clientY) {
       if (!video.duration) return null;
       const rect = timelineWrapper.getBoundingClientRect();
       const clickX = clientX - rect.left;
+      const clickY = clientY - rect.top;
       const duration = video.duration;
+
+      // Only draggable if click is inside the top house shape region (Y <= 28px)
+      if (clickY > 28) return null;
 
       for (let i = 0; i < currentState.markers.length; i++) {
         const markerX = (currentState.markers[i] / 1000 / duration) * rect.width;
-        if (Math.abs(markerX - clickX) <= 12) {
+        if (Math.abs(markerX - clickX) <= 10) {
           return i;
         }
       }
@@ -568,7 +582,7 @@
     }
 
     timelineWrapper.addEventListener('mousedown', (e) => {
-      const hitIdx = getMarkerIndexAtPos(e.clientX);
+      const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
       if (hitIdx !== null) {
         draggedMarkerIdx = hitIdx;
       } else {
@@ -581,7 +595,7 @@
       const rect = timelineWrapper.getBoundingClientRect();
 
       // Update hover cursor
-      const hitIdx = getMarkerIndexAtPos(e.clientX);
+      const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
       if (hitIdx !== null || draggedMarkerIdx !== null) {
         timelineWrapper.style.cursor = 'ew-resize';
         hoveredMarkerIdx = (draggedMarkerIdx !== null) ? draggedMarkerIdx : hitIdx;
@@ -636,14 +650,13 @@
       pushState(nextState);
     }
 
-    // --- Input Text Reset & Ctrl+Z Handler ---
+    // --- Input Text Reset & Handler ---
     sentenceInput.addEventListener('blur', handleSentenceChange);
     sentenceInput.addEventListener('change', handleSentenceChange);
 
     function handleSentenceChange() {
       const newText = sentenceInput.value.trim();
       if (newText !== currentState.sentence) {
-        // Leaving or changing text resets markers, but pushes to Undo stack
         pushState({
           sentence: newText,
           markers: []
@@ -651,10 +664,40 @@
       }
     }
 
+    // --- Editable Timings Box Handler ---
+    outputTimings.addEventListener('blur', parseTimingsFromInput);
+    outputTimings.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        outputTimings.blur();
+      }
+    });
+
+    function parseTimingsFromInput() {
+      const inputVal = outputTimings.value.trim();
+      if (!inputVal) return;
+
+      const intervals = inputVal.split(',').map(v => parseInt(v.trim(), 10)).filter(n => !isNaN(n));
+      if (intervals.length === 0) return;
+
+      // Reconstruct absolute timestamps from relative intervals
+      let cumulativeMs = 0;
+      const newMarkers = [];
+      for (let i = 0; i < intervals.length; i++) {
+        cumulativeMs += intervals[i];
+        newMarkers.push(cumulativeMs);
+      }
+
+      pushState({
+        sentence: currentState.sentence,
+        markers: newMarkers
+      });
+    }
+
     // Hotkeys Listener
     window.addEventListener('keydown', (e) => {
-      // Don't trigger hotkeys if typing inside text input
-      if (document.activeElement === sentenceInput) return;
+      // Don't trigger hotkeys if typing inside text inputs
+      if (document.activeElement === sentenceInput || document.activeElement === outputTimings) return;
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
@@ -692,7 +735,7 @@
     }
 
     function updateOutput() {
-      outputTimings.textContent = calculateIntervals(currentState.markers);
+      outputTimings.value = calculateIntervals(currentState.markers);
     }
 
     // --- Render Word Progress Chips ---
@@ -719,9 +762,9 @@
       });
     }
 
-    // --- Copy Button ---
+    // --- Copy Button with Bottom-Left Notifier ---
     btnCopy.addEventListener('click', () => {
-      navigator.clipboard.writeText(outputTimings.textContent).then(() => {
+      navigator.clipboard.writeText(outputTimings.value).then(() => {
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 2000);
       });
