@@ -1,24 +1,27 @@
-// _narabikaeDictionary.js - do not modify nor delete this line - v0
+// _narabikaeDictionary.js - do not modify nor delete this line - v1
 /**
  * _narabikaeDictionary.js
- * Web Search Translation & Offline Cache Module for Anki Sentence Ordering
+ * Dictionary Lookup & Offline Caching Module for Anki Sentence Ordering
+ * Powered by Jotoba API (Sentence Pairs with Native CORS) & Google GTX
  */
 
 (function() {
   'use strict';
 
-  var searchModeActive = false;
+  // --- CONFIGURATION ---
+  var enableClearCache = true; // Set to true to clear dictionary cache on every script load
   var CACHE_PREFIX = 'narabikae_dict_cache_';
+  var searchModeActive = false;
 
-  // Offline pre-built fallbacks for common words in case device has no internet on first launch
+  // Offline built-in fallbacks for common words
   var LOCAL_FALLBACKS = {
-    "to": {
-      word: "To",
-      japanese: "〜へ / 〜に",
-      reading: "へ / に",
+    "see": {
+      word: "See",
+      japanese: "見る",
+      reading: "みる",
       examples: [
-        { jp: "学校<span class=\"dict-highlight\">へ</span>行く", en: "Go <span class=\"dict-highlight\">to</span> school." },
-        { jp: "彼<span class=\"dict-highlight\">に</span>話す", en: "Talk <span class=\"dict-highlight\">to</span> him." }
+        { jp: "僕はそれを<span class=\"dict-highlight\">見</span>た", en: "I <span class=\"dict-highlight\">saw</span> it." },
+        { jp: "また明日お会いしましょう", en: "I hope to <span class=\"dict-highlight\">see</span> you tomorrow." }
       ]
     },
     "worry": {
@@ -30,16 +33,114 @@
         { jp: "<span class=\"dict-highlight\">心配</span>ない", en: "no <span class=\"dict-highlight\">worries</span>!" }
       ]
     },
-    "worried": {
-      word: "Worried",
-      japanese: "心配して",
-      reading: "しんぱいして",
+    "to": {
+      word: "To",
+      japanese: "〜へ",
+      reading: "へ",
       examples: [
-        { jp: "僕は<span class=\"dict-highlight\">心配</span>してた", en: "I was <span class=\"dict-highlight\">worried</span>." },
-        { jp: "彼女は<span class=\"dict-highlight\">心配</span>している", en: "She is <span class=\"dict-highlight\">worried</span>." }
+        { jp: "学校<span class=\"dict-highlight\">へ</span>行く", en: "Go <span class=\"dict-highlight\">to</span> school." },
+        { jp: "彼<span class=\"dict-highlight\">に</span>話す", en: "Talk <span class=\"dict-highlight\">to</span> him." }
       ]
     }
   };
+
+  /**
+   * Romaji to Hiragana Transliteration Engine
+   */
+  function romajiToHiragana(romaji) {
+    if (!romaji) return '';
+    var map = {
+      'a':'あ','i':'い','u':'う','e':'え','o':'お',
+      'ka':'か','ki':'き','ku':'く','ke':'け','ko':'こ',
+      'sa':'さ','shi':'し','su':'す','se':'せ','so':'そ',
+      'ta':'た','chi':'ち','tsu':'つ','te':'て','to':'と',
+      'na':'な','ni':'に','nu':'ぬ','ne':'ね','no':'の',
+      'ha':'は','hi':'ひ','fu':'ふ','he':'へ','ho':'ほ',
+      'ma':'ま','mi':'み','mu':'む','me':'め','mo':'も',
+      'ya':'や','yu':'ゆ','yo':'よ',
+      'ra':'ら','ri':'り','ru':'る','re':'れ','ro':'ろ',
+      'wa':'わ','wo':'を','n':'ん','nn':'ん',
+      'ga':'が','gi':'ぎ','gu':'ぐ','ge':'げ','go':'ご',
+      'za':'ざ','ji':'じ','zu':'ず','ze':'ぜ','zo':'ぞ',
+      'da':'だ','dji':'ぢ','dzu':'づ','de':'で','do':'ど',
+      'ba':'ば','bi':'び','bu':'ぶ','be':'べ','bo':'ぼ',
+      'pa':'ぱ','pi':'ぴ','pu':'ぷ','pe':'ぺ','po':'ぽ',
+      'kya':'きゃ','kyu':'きゅ','kyo':'きょ',
+      'sha':'しゃ','shu':'しゅ','sho':'しょ',
+      'cha':'ちゃ','chu':'ちゅ','cho':'ちょ',
+      'nya':'にゃ','nyu':'にゅ','nyo':'にょ',
+      'hya':'ひゃ','hyu':'ひゅ','hyo':'ひょ',
+      'mya':'みゃ','myu':'みゅ','myo':'みょ',
+      'rya':'りゃ','ryu':'りゅ','ryo':'りょ',
+      'gya':'ぎゃ','gyu':'ぎゅ','gyo':'ぎょ',
+      'ja':'じゃ','ju':'じゅ','jo':'じょ',
+      'bya':'びゃ','byu':'びゅ','byo':'びょ',
+      'pya':'ぴゃ','pyu':'ぴゅ','pyo':'ぴょ'
+    };
+
+    var str = romaji.toLowerCase().trim();
+    if (/[\u3040-\u30ff\u4e00-\u9faf]/.test(str)) return str;
+
+    var res = '';
+    var i = 0;
+    while (i < str.length) {
+      var match = false;
+      for (var len = 3; len >= 1; len--) {
+        var chunk = str.substr(i, len);
+        if (map[chunk]) {
+          res += map[chunk];
+          i += len;
+          match = true;
+          break;
+        }
+      }
+      if (!match) {
+        res += str[i];
+        i++;
+      }
+    }
+    return res;
+  }
+
+  function clearCache() {
+    try {
+      var keysToRemove = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key && key.indexOf(CACHE_PREFIX) === 0) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(function(k) {
+        localStorage.removeItem(k);
+      });
+      console.log("[NarabikaeDict] Cache cleared (" + keysToRemove.length + " items removed)");
+    } catch (e) {
+      console.warn("Cache clear error:", e);
+    }
+  }
+
+  function getCachedResult(word) {
+    var key = CACHE_PREFIX + cleanWord(word);
+    try {
+      var cached = localStorage.getItem(key);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (e) {
+      console.warn("Cache read error:", e);
+    }
+    return null;
+  }
+
+  function saveCachedResult(word, data) {
+    var key = CACHE_PREFIX + cleanWord(word);
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.warn("Cache write error:", e);
+    }
+  }
 
   function isSearchModeActive() {
     return searchModeActive;
@@ -67,138 +168,206 @@
     return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   }
 
+  function decodeHTMLEntities(str) {
+    if (!str) return '';
+    var txt = document.createElement('textarea');
+    txt.innerHTML = str;
+    return txt.value;
+  }
+
   function highlightWord(text, target) {
     if (!text || !target) return text;
-    var escaped = target.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    var cleanTarget = target.replace(/[()\[\]{}~]/g, '').trim();
+    if (!cleanTarget) return text;
+
+    var escaped = cleanTarget.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     var regex = new RegExp('(' + escaped + ')', 'gi');
     return text.replace(regex, '<span class="dict-highlight">$1</span>');
   }
 
+  function isValidExamplePair(en, jp) {
+    if (!en || !jp) return false;
+    if (en.toLowerCase() === jp.toLowerCase()) return false;
+    if (/http|www\.|tatoeba|warning|quality/i.test(en + jp)) return false;
+    if (en.length > 140 || jp.length > 140) return false;
+    if (en.length < 3 || jp.length < 1) return false;
+    return true;
+  }
+
+  function fetchWithTimeout(url, options, timeoutMs) {
+    if (typeof options === 'number') {
+      timeoutMs = options;
+      options = {};
+    }
+    options = options || {};
+    var ms = timeoutMs || 3500;
+
+    return new Promise(function(resolve, reject) {
+      var timer = setTimeout(function() {
+        reject(new Error("Request timed out"));
+      }, ms);
+
+      fetch(url, options)
+        .then(function(res) {
+          clearTimeout(timer);
+          resolve(res);
+        })
+        .catch(function(err) {
+          clearTimeout(timer);
+          reject(err);
+        });
+    });
+  }
+
   /**
-   * Cache Management (Saves queries locally to collection.media storage)
+   * Fetch sentence data from Jotoba API (Native CORS)
    */
-  function getCachedResult(word) {
-    var key = CACHE_PREFIX + cleanWord(word);
+  async function fetchJotobaData(cleanWord) {
+    var jotobaUrl = 'https://jotoba.de/api/search/sentences';
+    
     try {
-      var cached = localStorage.getItem(key);
-      if (cached) {
-        return JSON.parse(cached);
+      var res = await fetchWithTimeout(jotobaUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: cleanWord,
+          language: "English"
+        })
+      }, 3500);
+
+      if (res.ok) {
+        return await res.json();
       }
     } catch (e) {
-      console.warn("Cache read error:", e);
+      console.warn("Jotoba fetch error:", e);
     }
+
     return null;
   }
 
-  function saveCachedResult(word, data) {
-    var key = CACHE_PREFIX + cleanWord(word);
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-      console.warn("Cache write error:", e);
-    }
-  }
-
   /**
-   * Online Translation Fetch (MyMemory API - Native CORS support, EN to JA)
+   * Online Fetch: Google GTX (Translation & Reading) + Jotoba API (Sentence Pairs)
    */
   async function fetchOnlineDefinition(rawWord) {
-    var word = cleanWord(rawWord);
-    if (!word) return null;
+    var clean = cleanWord(rawWord);
+    if (!clean) return null;
 
-    // 1. Check local offline cache first
-    var cached = getCachedResult(word);
-    if (cached) return cached;
+    if (!enableClearCache) {
+      var cached = getCachedResult(clean);
+      if (cached) return cached;
+    }
 
-    // 2. Fetch live translation and example sentence matches from the Web
+    var displayWord = capitalize(rawWord);
+    var japaneseKanji = "";
+    var japaneseReading = "";
+    var examples = [];
+
+    var gtxUrl = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ja&dt=t&dt=rm&q=' + encodeURIComponent(clean);
+
     try {
-      var apiUrl = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(rawWord) + '&langpair=en|ja';
-      var res = await fetch(apiUrl);
+      var results = await Promise.allSettled([
+        fetchWithTimeout(gtxUrl, 3500),
+        fetchJotobaData(clean)
+      ]);
 
-      if (res.ok) {
-        var data = await res.json();
-        if (data && data.responseData && data.responseData.translatedText) {
-          var mainTranslation = data.responseData.translatedText;
-          var examples = [];
+      // Process Google GTX Translation & Furigana
+      if (results[0].status === 'fulfilled' && results[0].value && results[0].value.ok) {
+        try {
+          var gtxData = await results[0].value.json();
+          if (gtxData && gtxData[0] && gtxData[0][0]) {
+            japaneseKanji = gtxData[0][0][0] || "";
 
-          // Extract translation memory matches for example sentences
-          if (Array.isArray(data.matches)) {
-            var seen = new Set();
-            for (var i = 0; i < data.matches.length; i++) {
-              var m = data.matches[i];
-              var enText = (m.segment || '').trim();
-              var jpText = (m.translation || '').trim();
-
-              if (enText && jpText && enText.toLowerCase() !== jpText.toLowerCase() && !seen.has(enText.toLowerCase())) {
-                seen.add(enText.toLowerCase());
-
-                var highlightedEn = highlightWord(enText, rawWord);
-                var highlightedJp = highlightWord(jpText, mainTranslation);
-
-                examples.push({
-                  jp: highlightedJp,
-                  en: highlightedEn
-                });
-
-                if (examples.length >= 3) break;
-              }
+            if (gtxData[0][1] && gtxData[0][1][2]) {
+              var romaji = gtxData[0][1][2];
+              japaneseReading = romajiToHiragana(romaji);
             }
           }
+        } catch (e) {
+          console.warn("Google GTX parse error:", e);
+        }
+      }
 
-          if (examples.length === 0) {
-            examples.push({
-              jp: "<span class=\"dict-highlight\">" + mainTranslation + "</span>",
-              en: "<span class=\"dict-highlight\">" + rawWord + "</span>"
-            });
+      // Process Jotoba Sentence Pairs
+      if (results[1].status === 'fulfilled' && results[1].value) {
+        try {
+          var jotobaData = results[1].value;
+          var sentences = (jotobaData && jotobaData.sentences) ? jotobaData.sentences : [];
+          var seen = new Set();
+
+          for (var i = 0; i < sentences.length; i++) {
+            var item = sentences[i];
+            var rawJp = item.content || item.japanese || '';
+            var enText = decodeHTMLEntities(item.translation || item.english || '').trim();
+
+            // Strips Jotoba furigana bracket notation: "[食|た]べる" -> "食べる"
+            var jpText = decodeHTMLEntities(rawJp.replace(/\[([^|\]]+)\|?[^\]]*\]/g, '$1')).trim();
+
+            if (isValidExamplePair(enText, jpText) && !seen.has(enText.toLowerCase())) {
+              seen.add(enText.toLowerCase());
+
+              examples.push({
+                jp: highlightWord(jpText, japaneseKanji),
+                en: highlightWord(enText, rawWord)
+              });
+            }
+            if (examples.length >= 3) break;
           }
-
-          var entry = {
-            word: capitalize(rawWord),
-            japanese: mainTranslation,
-            reading: "",
-            examples: examples
-          };
-
-          // Save to local cache for instant offline reuse
-          saveCachedResult(word, entry);
-          return entry;
+        } catch (e) {
+          console.warn("Jotoba parse error:", e);
         }
       }
     } catch (err) {
-      console.warn("Live web lookup failed, falling back:", err);
+      console.warn("API Fetch Error:", err);
     }
 
-    // 3. Check built-in fallbacks if offline
-    if (LOCAL_FALLBACKS[word]) {
-      var fallback = LOCAL_FALLBACKS[word];
-      saveCachedResult(word, fallback);
-      return fallback;
+    // Fallback if translation API failed
+    if (!japaneseKanji) {
+      if (LOCAL_FALLBACKS[clean]) {
+        var fb = LOCAL_FALLBACKS[clean];
+        saveCachedResult(clean, fb);
+        return fb;
+      }
+      japaneseKanji = displayWord;
     }
 
-    // 4. Default notice if completely offline without cache
-    return {
-      word: capitalize(rawWord),
-      japanese: rawWord,
-      reading: "",
-      examples: [
-        {
-          jp: "<span class=\"dict-highlight\">" + rawWord + "</span> の検索結果が見つかりませんでした。",
-          en: "Could not retrieve online translation for <span class=\"dict-highlight\">" + rawWord + "</span>."
-        }
-      ]
+    // Prevent identical Kanji and Reading duplication
+    if (japaneseKanji === japaneseReading) {
+      japaneseReading = "";
+    }
+
+    var entry = {
+      word: displayWord,
+      japanese: japaneseKanji,
+      reading: japaneseReading,
+      examples: examples
     };
+
+    saveCachedResult(clean, entry);
+    return entry;
   }
 
   /**
-   * Modal Display Handler
+   * Render Modal Header Layout: <eng> (<漢字> • <ふりがな>)
    */
   function renderModalContent(data) {
     var modalBody = document.getElementById('dict-modal-body');
     if (!modalBody) return;
 
-    var headerText = data.word + ' (' + data.japanese + (data.reading ? ' • ' + data.reading : '') + ')';
-    
-    var html = '<h3 class="dict-header">#' + headerText + '</h3>';
+    var engText = data.word || '';
+    var kanjiText = data.japanese || '';
+    var readingText = data.reading || '';
+
+    var headerText = engText;
+
+    if (kanjiText && readingText && kanjiText !== readingText) {
+      headerText += ' (' + kanjiText + ' • ' + readingText + ')';
+    } else if (kanjiText) {
+      headerText += ' (' + kanjiText + ')';
+    }
+
+    var html = '<h3 class="dict-header">' + headerText + '</h3>';
 
     if (data.examples && data.examples.length > 0) {
       data.examples.forEach(function(ex) {
@@ -207,6 +376,8 @@
         html += '  <div class="dict-example-en">' + ex.en + '</div>';
         html += '</div>';
       });
+    } else {
+      html += '<div style="text-align: center; color: #888; font-style: italic; margin-top: 16px;">No example sentences found on Jotoba.</div>';
     }
 
     modalBody.innerHTML = html;
@@ -240,6 +411,10 @@
   }
 
   function init() {
+    if (enableClearCache) {
+      clearCache();
+    }
+
     var btnSearch = document.getElementById('btn-search');
     if (btnSearch) {
       btnSearch.onclick = function() {
@@ -280,6 +455,7 @@
     isSearchModeActive: isSearchModeActive,
     toggleSearchMode: toggleSearchMode,
     lookupWord: lookupWord,
-    closeModal: closeModal
+    closeModal: closeModal,
+    clearCache: clearCache
   };
 })();
