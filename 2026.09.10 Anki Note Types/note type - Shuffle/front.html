@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v11.6 -->
+<!-- front.html - do not delete this line nor modify. v11.7 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -389,16 +389,22 @@
       targetBox.innerHTML = '';
       sourceBox.innerHTML = '';
 
-      if (selected.length === 0) {
-        var phBox = document.createElement('div');
-        phBox.className = 'placeholder-box';
-        phBox.innerText = 'Tap or drag words here...';
-        targetBox.appendChild(phBox);
-      }
-
       selected.forEach(function(item, index) {
         targetBox.appendChild(createChip(item, 'target', index));
       });
+
+      var userItems = selected.filter(function(item) { return !item.locked; });
+      if (userItems.length === 0) {
+        var phBox = document.createElement('div');
+        phBox.className = 'placeholder-box';
+        phBox.innerText = 'Tap or drag words here...';
+        var firstLocked = targetBox.querySelector('.locked-chip');
+        if (firstLocked) {
+          targetBox.insertBefore(phBox, firstLocked);
+        } else {
+          targetBox.appendChild(phBox);
+        }
+      }
 
       available.forEach(function(item, index) {
         sourceBox.appendChild(createChip(item, 'source', index));
@@ -415,7 +421,6 @@
       if (!targetBox || !sourceBox) return;
 
       if (numLocked > 0 && !hasAnimatedLock) {
-        // 1. Temporarily put everything in source-box to measure the expanded height and start positions
         lockedItems.forEach(function(item) { available.push(item); });
         renderBoxes();
 
@@ -423,7 +428,6 @@
         var startRects = sourceElems.map(function(el) { return el.getBoundingClientRect(); });
         var expandedHeight = sourceBox.offsetHeight;
 
-        // 2. Move locked items to selected, leaving only movable items in available (source box)
         for (var i = 0; i < lockedItems.length; i++) {
           available.pop();
         }
@@ -432,7 +436,6 @@
 
         var collapsedHeight = sourceBox.offsetHeight;
 
-        // 3. Start expanded, then transition/shrink height down to collapsed height
         sourceBox.style.height = expandedHeight + 'px';
         sourceBox.style.overflow = 'hidden';
         sourceBox.style.transition = 'height 0.8s ease-in-out';
@@ -462,7 +465,6 @@
               targetElem.classList.add('locked-chip');
               targetElem.style.animation = 'glide ' + (animDuration / 1000) + 's ease-in-out forwards, pop ' + (animDuration / 1000) + 's ease-in-out forwards';
               if (i === 0) {
-                // Shrink source-box height from expanded down to collapsed height
                 sourceBox.style.height = collapsedHeight + 'px';
               }
             }, animDelay);
@@ -575,7 +577,8 @@
         if (e.target === targetBox && !targetBox.contains(e.relatedTarget)) {
           removePlaceholder();
           var phBox = targetBox.querySelector('.placeholder-box');
-          if (phBox && selected.length === 0) {
+          var userItems = selected.filter(function(item) { return !item.locked; });
+          if (phBox && userItems.length === 0) {
             phBox.style.display = 'inline-flex';
           }
         }
