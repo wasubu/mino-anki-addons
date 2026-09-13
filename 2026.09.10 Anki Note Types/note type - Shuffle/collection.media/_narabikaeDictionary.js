@@ -1,4 +1,4 @@
-// _narabikaeDictionary.js - do not modify nor delete this line - v2
+// _narabikaeDictionary.js - do not modify nor delete this line - v3
 /**
  * _narabikaeDictionary.js
  * Dictionary Lookup & Offline Caching Module for Anki Sentence Ordering
@@ -45,8 +45,48 @@
   };
 
   /**
+   * Helper to check if a Japanese text contains Kanji
+   */
+  function containsKanji(str) {
+    if (!str) return false;
+    return /[\u4e00-\u9faf\u3400-\u4dbf]/.test(str);
+  }
+
+  /**
+   * Inject CSS for sticky header and vertical scrolling
+   */
+  function injectStyles() {
+    if (document.getElementById('narabikae-dict-styles')) return;
+    var style = document.createElement('style');
+    style.id = 'narabikae-dict-styles';
+    style.textContent = [
+      '#dict-modal-body {',
+      '  max-height: 70vh;',
+      '  overflow-y: auto;',
+      '  position: relative;',
+      '}',
+      '.dict-header {',
+      '  position: sticky;',
+      '  top: 0;',
+      '  background: #ffffff;',
+      '  padding: 12px 16px;',
+      '  margin: 0 -16px 12px -16px;',
+      '  z-index: 10;',
+      '  border-bottom: 1px solid #e0e0e0;',
+      '}',
+      '@media (prefers-color-scheme: dark) {',
+      '  .dict-header {',
+      '    background: #2d2d2d;',
+      '    color: #ffffff;',
+      '    border-bottom-color: #444444;',
+      '  }',
+      '}'
+    ].join('\n');
+    document.head.appendChild(style);
+  }
+
+  /**
    * Enhanced Romaji to Hiragana Transliteration Engine
-   * Handles Hepburn macrons (ō, ā, ū, ē, ī), hyphens (-), apostrophes ('), and double consonants (っ)
    */
   function romajiToHiragana(romaji) {
     if (!romaji) return '';
@@ -95,7 +135,6 @@
     var res = '';
     var i = 0;
     while (i < str.length) {
-      // Handle sokuon (small tsu っ) for double consonants
       if (i + 1 < str.length && str[i] === str[i+1] && /[bcdfghjklmpqrstvwxyz]/.test(str[i]) && str[i] !== 'n') {
         res += 'っ';
         i++;
@@ -311,7 +350,7 @@
         }
       }
 
-      // Process Jotoba Sentence Pairs
+      // Process Jotoba Sentence Pairs (max 6)
       if (results[1].status === 'fulfilled' && results[1].value) {
         try {
           var jotobaData = results[1].value;
@@ -323,7 +362,6 @@
             var rawJp = item.content || item.japanese || '';
             var enText = decodeHTMLEntities(item.translation || item.english || '').trim();
 
-            // Strips Jotoba furigana notation: "[食|た]べる" -> "食べる"
             var jpText = decodeHTMLEntities(rawJp.replace(/\[([^|\]]+)\|?[^\]]*\]/g, '$1')).trim();
 
             if (isValidExamplePair(enText, jpText) && !seen.has(enText.toLowerCase())) {
@@ -334,7 +372,7 @@
                 en: highlightWord(enText, clean)
               });
             }
-            if (examples.length >= 3) break;
+            if (examples.length >= 6) break;
           }
         } catch (e) {
           console.warn("Jotoba parse error:", e);
@@ -354,8 +392,8 @@
       japaneseKanji = displayWord;
     }
 
-    // Prevent identical Kanji and Reading duplication
-    if (japaneseKanji === japaneseReading) {
+    // Prevent duplicate reading or showing reading when no kanji is present
+    if (japaneseKanji === japaneseReading || !containsKanji(japaneseKanji)) {
       japaneseReading = "";
     }
 
@@ -371,7 +409,7 @@
   }
 
   /**
-   * Render Modal Header Layout: <eng> (<漢字> • <ふりがな>)
+   * Render Modal Header Layout & Examples
    */
   function renderModalContent(data) {
     var modalBody = document.getElementById('dict-modal-body');
@@ -379,7 +417,7 @@
 
     var engText = data.word || '';
     var kanjiText = data.japanese || '';
-    var readingText = data.reading || '';
+    var readingText = containsKanji(kanjiText) ? (data.reading || '') : '';
 
     var headerText = engText;
 
@@ -390,19 +428,46 @@
     }
 
     var html = '<h3 class="dict-header">' + headerText + '</h3>';
+    html += '<div id="dict-examples-list"></div>';
+    modalBody.innerHTML = html;
 
-    if (data.examples && data.examples.length > 0) {
-      data.examples.forEach(function(ex) {
-        html += '<div class="dict-example-item">';
-        html += '  <div class="dict-example-jp">' + ex.jp + '</div>';
-        html += '  <div class="dict-example-en">' + ex.en + '</div>';
-        html += '</div>';
-      });
-    } else {
-      html += '<div style="text-align: center; color: #888; font-style: italic; margin-top: 16px;">No example sentences found on Jotoba.</div>';
+    var listEl = document.getElementById('dict-examples-list');
+    var examples = data.examples || [];
+
+    if (examples.length === 0) {
+      if (listEl) {
+        listEl.innerHTML = '<div style="text-align: center; color: #888; font-style: italic; margin-top: 16px;">No example sentences found on Jotoba.</div>';
+      }
+      return;
     }
 
-    modalBody.innerHTML = html;
+    // Batch 1: Render first 3 examples immediately
+    var firstBatch = examples.slice(0, 3);
+    var batch1Html = '';
+    firstBatch.forEach(function(ex) {
+      batch1Html += '<div class="dict-example-item">';
+      batch1Html += '  <div class="dict-example-jp">' + ex.jp + '</div>';
+      batch1Html += '  <div class="dict-example-en">' + ex.en + '</div>';
+      batch1Html += '</div>';
+    });
+    listEl.innerHTML = batch1Html;
+
+    // Batch 2: Render remaining examples (up to 6 total) after brief delay
+    if (examples.length > 3) {
+      setTimeout(function() {
+        var secondBatch = examples.slice(3, 6);
+        var batch2Html = '';
+        secondBatch.forEach(function(ex) {
+          batch2Html += '<div class="dict-example-item">';
+          batch2Html += '  <div class="dict-example-jp">' + ex.jp + '</div>';
+          batch2Html += '  <div class="dict-example-en">' + ex.en + '</div>';
+          batch2Html += '</div>';
+        });
+        if (listEl) {
+          listEl.insertAdjacentHTML('beforeend', batch2Html);
+        }
+      }, 100);
+    }
   }
 
   function openModal() {
@@ -434,6 +499,8 @@
   }
 
   function init() {
+    injectStyles();
+
     if (enableClearCache) {
       clearCache();
     }
