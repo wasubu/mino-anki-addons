@@ -1,4 +1,4 @@
-// _narabikaeDictionary.js - do not modify nor delete this line - v4
+// _narabikaeDictionary.js - do not modify nor delete this line - v5
 /**
  * _narabikaeDictionary.js
  * Dictionary Lookup & Offline Caching Module for Anki Sentence Ordering
@@ -9,7 +9,7 @@
   'use strict';
 
   // --- CONFIGURATION ---
-  var enableClearCache = true; // Set to true to clear dictionary cache on every script load
+  var enableClearCache = false; // Set to true to clear dictionary cache on every script load
   var CACHE_PREFIX = 'narabikae_dict_cache_';
   var searchModeActive = false;
 
@@ -53,19 +53,23 @@
   }
 
   /**
-   * Inject CSS for sticky header and vertical scrolling (no horizontal scroll)
+   * Inject CSS for sticky header, vertical scrolling, and scroll-containment
    */
   function injectStyles() {
     if (document.getElementById('narabikae-dict-styles')) return;
     var style = document.createElement('style');
     style.id = 'narabikae-dict-styles';
     style.textContent = [
+      '#dict-modal-overlay {',
+      '  overscroll-behavior: contain;',
+      '}',
       '#dict-modal-body {',
       '  max-height: 70vh;',
       '  overflow-y: auto;',
       '  overflow-x: hidden;',
       '  position: relative;',
       '  box-sizing: border-box;',
+      '  overscroll-behavior: contain;',
       '}',
       '.dict-header {',
       '  position: sticky;',
@@ -477,6 +481,7 @@
     var modalOverlay = document.getElementById('dict-modal-overlay');
     if (modalOverlay) {
       modalOverlay.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
     }
   }
 
@@ -484,6 +489,7 @@
     var modalOverlay = document.getElementById('dict-modal-overlay');
     if (modalOverlay) {
       modalOverlay.style.display = 'none';
+      document.body.style.overflow = '';
     }
   }
 
