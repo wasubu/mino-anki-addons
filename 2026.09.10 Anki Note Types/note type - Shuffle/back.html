@@ -1,9 +1,19 @@
-<!-- back.html - do not delete this line nor modify. v12.2 -->
+<!-- back.html - do not delete this line nor modify. v12.3 -->
 <div id="anki-back-flag" style="display:none;"></div>
 
 {{FrontSide}}
 
 <div id="back-result"></div>
+
+<!-- Dictionary Overlay Modal Container -->
+<div id="dict-modal-overlay" class="dict-modal-overlay" style="display: none;">
+  <div class="dict-modal-card">
+    <button class="dict-modal-close" id="dict-modal-close">&times;</button>
+    <div id="dict-modal-body"></div>
+  </div>
+</div>
+
+<script src="_narabikaeDictionary.js"></script>
 
 <script>
 // back.html - do not delete this line nor modify.
@@ -274,7 +284,7 @@
   if (backResult) {
     backResult.innerHTML = [
       '<div class="back-btn-container" style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; align-items: center; margin-top: 12px;">',
-      '  <button id="btn-search" class="btn-search-mode" style="flex: 1; margin: 0;">🔍 Search</button>',
+      '  <div id="btn-search-back" class="btn-search" role="button" style="flex: 1; margin: 0; justify-content: center;">🔍 Search</div>',
       '  <button id="btn-show-answer" class="btn-show-answer green-state" style="flex: 2; margin: 0;">See the right answer</button>',
       '</div>'
     ].join('');
@@ -282,7 +292,7 @@
     var btnShow = document.getElementById("btn-show-answer");
     if (btnShow) btnShow.onclick = toggleAnswer;
 
-    var btnSearch = document.getElementById("btn-search");
+    var btnSearch = document.getElementById("btn-search-back");
     if (btnSearch) {
       btnSearch.onclick = function(e) {
         e.preventDefault();
@@ -290,6 +300,21 @@
           window.NarabikaeDict.toggleSearchMode();
         }
       };
+
+      if (shuffleContainer) {
+        var observer = new MutationObserver(function() {
+          if (btnSearch.classList.contains('search-mode-active')) {
+            shuffleContainer.classList.add('search-active');
+          } else {
+            shuffleContainer.classList.remove('search-active');
+          }
+        });
+
+        observer.observe(btnSearch, {
+          attributes: true,
+          attributeFilter: ['class']
+        });
+      }
     }
   }
 
