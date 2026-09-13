@@ -13,8 +13,4 @@ This note type is suppose to be paired with "only_again" tweak from the mino twe
 **v11** - I added the word timing feature. where in the field {{Timing}} I can add something like "300, 400, 600, 100" where the numbers are in ms and represents the interval bewteen words. for example "I love you too" with those numbers, 300 will be the interval from the start of the audio to the word "I" and 400 is interval from "I" to "love". also improved the animation from the start of front to be invisible to the mouse and bigger and slower animations. the back.html is kinda bloated so I moved styles to the main css.
 Hopefully I can make a tool to make these Timing numbers faster.
 
-## Anki Video Optimizer.ahk version list:
-
-**v1** - this ahk script will make the video you put downsize to 720, compress it, and make an Anki-friendly MP4.
-
-**v2** - Instead of saving it to mp4, it saves to .webm file, It also uses VP9 for video and Opus for audio.
+**v12** - Quality of life improvements. Now dragging words on input box makes it disappear. before it would leave an after image and that was not desirable. Made the locked correct words animation start inside the word box instead of starting outside the word box. Highlight for locked correct words highlight is now green instead of blue. on 13+ words, it will add another locked correct words so 2. fixed where dragging and repositioning words won't land exactly where you put it.
