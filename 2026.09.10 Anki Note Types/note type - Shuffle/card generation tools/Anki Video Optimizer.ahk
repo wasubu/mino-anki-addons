@@ -1,4 +1,4 @@
-; Anki Video Optimizer.ahk - do not delete or modify this line. v3
+; Anki Video Optimizer.ahk - do not delete or modify this line. v4
 #Requires AutoHotkey v2.0
 
 ; --- CONFIGURATION ---
@@ -9,6 +9,9 @@ ffmpegPath := "ffmpeg.exe"
 ; Set to true to show the command prompt terminal with live FFmpeg logs.
 ; Set to false to run silently in the background.
 enableDebug := false
+
+; YouTube loudness target (-14 LUFS, -1.0 dBTP)
+audioFilter := "loudnorm=I=-14:TP=-1.0:LRA=11"
 
 ; --- GUI SETUP ---
 myGui := Gui("+AlwaysOnTop", "Anki Video Optimizer (WebM)")
@@ -40,15 +43,18 @@ ProcessVideo(inputFile) {
     ; Clean scale filter string to prevent AHK quotation escaping issues
     scaleFilter := "scale=-2:'min(720,ih)'"
 
+    ; -b:v 0 combined with -crf 32 enables pure quality-based encoding without forcing a target bitrate floor
     cmd := '"' . ffmpegPath . '" -i "' . inputFile .
         '" -vf "' . scaleFilter .
-        '" -c:v libvpx-vp9 -crf 32 -b:v 0 -row-mt 1 -pix_fmt yuv420p -c:a libopus -b:a 96k -y "' .
+        '" -c:v libvpx-vp9 -crf 32 -b:v 0 -row-mt 1 -pix_fmt yuv420p ' .
+        '-af "' . audioFilter .
+        '" -c:a libopus -b:a 96k -y "' .
         outputFile . '"'
 
     ; Toggle window visibility based on enableDebug
     hideWindow := enableDebug ? "" : "Hide"
 
-    ToolTip("Compressing video to WebM for Anki...")
+    ToolTip("Compressing video & normalizing audio to -14 LUFS...")
     RunWait(A_ComSpec . ' /c "' . cmd . '"', , hideWindow)
     ToolTip()
 
