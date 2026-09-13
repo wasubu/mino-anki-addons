@@ -1,4 +1,4 @@
-// _narabikaeDictionary.js - do not modify nor delete this line - v3
+// _narabikaeDictionary.js - do not modify nor delete this line - v4
 /**
  * _narabikaeDictionary.js
  * Dictionary Lookup & Offline Caching Module for Anki Sentence Ordering
@@ -53,7 +53,7 @@
   }
 
   /**
-   * Inject CSS for sticky header and vertical scrolling
+   * Inject CSS for sticky header and vertical scrolling (no horizontal scroll)
    */
   function injectStyles() {
     if (document.getElementById('narabikae-dict-styles')) return;
@@ -63,16 +63,19 @@
       '#dict-modal-body {',
       '  max-height: 70vh;',
       '  overflow-y: auto;',
+      '  overflow-x: hidden;',
       '  position: relative;',
+      '  box-sizing: border-box;',
       '}',
       '.dict-header {',
       '  position: sticky;',
       '  top: 0;',
       '  background: #ffffff;',
-      '  padding: 12px 16px;',
-      '  margin: 0 -16px 12px -16px;',
+      '  padding: 12px 0;',
+      '  margin: 0 0 12px 0;',
       '  z-index: 10;',
       '  border-bottom: 1px solid #e0e0e0;',
+      '  word-break: break-word;',
       '}',
       '@media (prefers-color-scheme: dark) {',
       '  .dict-header {',
