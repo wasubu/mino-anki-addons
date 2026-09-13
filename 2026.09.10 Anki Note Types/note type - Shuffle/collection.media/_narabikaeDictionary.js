@@ -1,179 +1,267 @@
+// _narabikaeDictionary.js - do not modify nor delete this line - v0
 /**
- * _narabikaeDictionary.js - Anki Card Dictionary & Search Overlay Module
- * Caches word lookup results in localStorage for offline access.
+ * _narabikaeDictionary.js
+ * Dictionary Lookup & Offline Caching Module for Anki Sentence Ordering Cards
  */
-(function () {
-  var isSearchActive = false;
+
+(function() {
+  'use strict';
+
+  var searchModeActive = false;
   var CACHE_PREFIX = 'narabikae_dict_cache_';
 
-  // Toggle Search Mode state
-  window.toggleSearchMode = function () {
-    isSearchActive = !isSearchActive;
+  // Built-in offline fallback dictionary for common words
+  var LOCAL_DICTIONARY = {
+    "worry": {
+      word: "Worry",
+      japanese: "心配",
+      reading: "しんぱい",
+      examples: [
+        { jp: "僕は<span class=\"dict-highlight\">心配</span>してた", en: "I was <span class=\"dict-highlight\">worried</span>." },
+        { jp: "<span class=\"dict-highlight\">心配</span>ない", en: "no <span class=\"dict-highlight\">worries</span>!" }
+      ]
+    },
+    "worried": {
+      word: "Worried",
+      japanese: "心配",
+      reading: "しんぱい",
+      examples: [
+        { jp: "僕は<span class=\"dict-highlight\">心配</span>してた", en: "I was <span class=\"dict-highlight\">worried</span>." },
+        { jp: "彼女はとても<span class=\"dict-highlight\">心配</span>している。", en: "She is very <span class=\"dict-highlight\">worried</span>." }
+      ]
+    }
+  };
+
+  /**
+   * Check if Search mode is currently active
+   */
+  function isSearchModeActive() {
+    return searchModeActive;
+  }
+
+  /**
+   * Toggle Search Mode on/off
+   */
+  function toggleSearchMode() {
+    searchModeActive = !searchModeActive;
     var btn = document.getElementById('btn-search');
-    var targetBox = document.getElementById('target-box');
-    var sourceBox = document.getElementById('source-box');
-
     if (btn) {
-      if (isSearchActive) {
-        btn.classList.add('active');
-        btn.innerHTML = '🔍 Cancel Search';
+      if (searchModeActive) {
+        btn.classList.add('search-mode-active');
       } else {
-        btn.classList.remove('active');
-        btn.innerHTML = '🔍 Search';
+        btn.classList.remove('search-mode-active');
       }
     }
+    return searchModeActive;
+  }
 
-    if (targetBox) targetBox.classList.toggle('search-mode-active', isSearchActive);
-    if (sourceBox) sourceBox.classList.toggle('search-mode-active', isSearchActive);
-  };
+  function cleanWord(w) {
+    return (w || '').trim().toLowerCase().replace(/[^\w]/g, '');
+  }
 
-  // Attach event listener on word chip clicks during search mode
-  document.addEventListener('click', function (e) {
-    var chip = e.target.closest('.word-chip');
-    if (chip && isSearchActive) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Extract text without punctuation
-      var cleanWord = chip.innerText.trim().replace(/[^\w\s'-]/g, '');
-      if (cleanWord) {
-        openDictionaryModal(cleanWord);
-      }
-      toggleSearchMode(); // Turn off search mode after selection
-    }
-  }, true);
-
-  // Open overlay and load dictionary data
-  window.openDictionaryModal = function (word) {
-    var overlay = document.getElementById('dict-overlay');
-    var body = document.getElementById('dict-modal-body');
-    if (!overlay || !body) return;
-
-    overlay.style.display = 'flex';
-    body.innerHTML = '<div class="dict-loading">Loading translation for "<b>' + escapeHtml(word) + '</b>"...</div>';
-
-    // 1. Check offline cache first
-    var cachedData = getCachedWord(word);
-    if (cachedData) {
-      renderModalContent(word, cachedData, true);
-      return;
-    }
-
-    // 2. Fetch from online API if not cached
-    fetchDictionaryData(word)
-      .then(function (data) {
-        saveWordToCache(word, data);
-        renderModalContent(word, data, false);
-      })
-      .catch(function (err) {
-        body.innerHTML = '<div class="dict-error">Unable to load translation offline. Connect to the internet to search new words.</div>';
-      });
-  };
-
-  // Close overlay modal
-  window.closeDictionaryModal = function () {
-    var overlay = document.getElementById('dict-overlay');
-    if (overlay) {
-      overlay.style.display = 'none';
-    }
-  };
-
-  // Cache utilities using localStorage
-  function getCachedWord(word) {
+  /**
+   * Read cached lookup from localStorage (for offline/instant use)
+   */
+  function getCachedResult(word) {
+    var key = CACHE_PREFIX + cleanWord(word);
     try {
-      var item = localStorage.getItem(CACHE_PREFIX + word.toLowerCase());
-      return item ? JSON.parse(item) : null;
+      var cached = localStorage.getItem(key);
+      if (cached) {
+        return JSON.parse(cached);
+      }
     } catch (e) {
-      return null;
+      console.warn("LocalStorage read error:", e);
     }
+    return null;
   }
 
-  function saveWordToCache(word, data) {
+  /**
+   * Save fetched lookup to localStorage (caching for collection.media / offline storage)
+   */
+  function saveCachedResult(word, data) {
+    var key = CACHE_PREFIX + cleanWord(word);
     try {
-      localStorage.setItem(CACHE_PREFIX + word.toLowerCase(), JSON.stringify(data));
-    } catch (e) {}
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.warn("LocalStorage write error:", e);
+    }
   }
 
-  // Fetch dictionary data using public CORS proxy & Jisho API
-  function fetchDictionaryData(word) {
-    var apiUrl = 'https://corsproxy.io/?' + encodeURIComponent('https://jisho.org/api/v1/search/words?keyword=' + word);
+  /**
+   * Fetch dictionary definition and sentence translation
+   */
+  async function fetchOnlineDefinition(rawWord) {
+    var word = cleanWord(rawWord);
+    if (!word) return null;
 
-    return fetch(apiUrl)
-      .then(function (res) {
-        if (!res.ok) throw new Error('Network error');
-        return res.json();
-      })
-      .then(function (json) {
-        if (!json.data || json.data.length === 0) {
-          throw new Error('No definitions found');
+    // 1. Check local cache (Offline First)
+    var cached = getCachedResult(word);
+    if (cached) return cached;
+
+    // 2. Check local fallback entries
+    if (LOCAL_DICTIONARY[word]) {
+      var localData = LOCAL_DICTIONARY[word];
+      saveCachedResult(word, localData);
+      return localData;
+    }
+
+    // 3. Fetch from API when online (Jisho API via CORS proxy)
+    try {
+      var targetUrl = 'https://jisho.org/api/v1/search/words?keyword=' + encodeURIComponent(word);
+      var proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
+      var res = await fetch(proxyUrl);
+      
+      if (res.ok) {
+        var data = await res.json();
+        if (data && data.data && data.data.length > 0) {
+          var item = data.data[0];
+          var japaneseObj = item.japanese[0] || {};
+          var kanji = japaneseObj.word || japaneseObj.reading || rawWord;
+          var reading = japaneseObj.reading || '';
+          
+          var senses = item.senses || [];
+          var primarySense = senses[0] && senses[0].english_definitions ? senses[0].english_definitions.join(', ') : '';
+
+          var entry = {
+            word: rawWord,
+            japanese: kanji,
+            reading: reading,
+            meanings: primarySense,
+            examples: [
+              {
+                jp: kanji + " (" + (reading || kanji) + ")",
+                en: "Definition: <span class=\"dict-highlight\">" + primarySense + "</span>"
+              }
+            ]
+          };
+
+          saveCachedResult(word, entry);
+          return entry;
         }
+      }
+    } catch (err) {
+      console.log("Online fetch error, using fallback format:", err);
+    }
 
-        var entry = json.data[0];
-        var primaryKanji = (entry.japanese[0] && entry.japanese[0].word) || entry.slug;
-        var reading = (entry.japanese[0] && entry.japanese[0].reading) || '';
-
-        // Examples formatting
-        var examples = [];
-        if (entry.senses && entry.senses.length > 0) {
-          entry.senses.slice(0, 3).forEach(function (sense) {
-            var englishDefs = sense.english_definitions.join(', ');
-            examples.push({
-              jp: primaryKanji + (reading ? ' (' + reading + ')' : ''),
-              en: englishDefs
-            });
-          });
+    // Fallback if lookup failed or offline without cache
+    var fallbackEntry = {
+      word: rawWord,
+      japanese: rawWord,
+      reading: "―",
+      examples: [
+        {
+          jp: "<span class=\"dict-highlight\">" + rawWord + "</span> の検索結果が見つかりませんでした。",
+          en: "No translation cached for <span class=\"dict-highlight\">" + rawWord + "</span>."
         }
-
-        return {
-          kanji: primaryKanji,
-          reading: reading,
-          examples: examples
-        };
-      });
+      ]
+    };
+    return fallbackEntry;
   }
 
-  // Render HTML inside Modal Window
-  function renderModalContent(word, data, isFromCache) {
-    var body = document.getElementById('dict-modal-body');
-    if (!body) return;
+  /**
+   * Render dictionary details inside modal
+   */
+  function renderModalContent(data) {
+    var modalBody = document.getElementById('dict-modal-body');
+    if (!modalBody) return;
 
-    var headerText = word.charAt(0).toUpperCase() + word.slice(1);
-    var jpHeader = data.kanji;
-    if (data.reading && data.reading !== data.kanji) {
-      jpHeader += ' • ' + data.reading;
+    var headingTitle = (data.word || '') + ' (' + (data.japanese || '') + (data.reading ? ' • ' + data.reading : '') + ')';
+    
+    var html = '<h3 class="dict-header">#' + headingTitle + '</h3>';
+
+    if (data.meanings) {
+      html += '<div style="margin-bottom: 12px; font-size: 0.9em; color: #616161;"><strong>Definition:</strong> ' + data.meanings + '</div>';
     }
 
-    var html = '<div class="dict-header">';
-    html += '<h2>' + escapeHtml(headerText) + ' <span class="dict-jp-main">(' + escapeHtml(jpHeader) + ')</span></h2>';
-    if (isFromCache) {
-      html += '<span class="dict-cache-badge">⚡ Offline Cache</span>';
-    }
-    html += '</div>';
-
-    html += '<div class="dict-examples">';
     if (data.examples && data.examples.length > 0) {
-      data.examples.forEach(function (ex) {
+      data.examples.forEach(function(ex) {
         html += '<div class="dict-example-item">';
-        html += '<div class="dict-ex-jp">' + highlightWord(ex.jp) + '</div>';
-        html += '<div class="dict-ex-en">' + highlightWord(ex.en) + '</div>';
+        html += '  <div class="dict-example-jp">' + ex.jp + '</div>';
+        html += '  <div class="dict-example-en">' + ex.en + '</div>';
         html += '</div>';
       });
     } else {
-      html += '<div class="dict-example-item">No example sentences available.</div>';
+      html += '<div style="color: #888;">No example sentences found.</div>';
     }
-    html += '</div>';
 
-    body.innerHTML = html;
+    modalBody.innerHTML = html;
   }
 
-  function highlightWord(text) {
-    if (!text) return '';
-    return escapeHtml(text).replace(/(<b>|<\/b>)/g, function (m) {
-      return m;
+  function openModal() {
+    var modalOverlay = document.getElementById('dict-modal-overlay');
+    if (modalOverlay) {
+      modalOverlay.style.display = 'flex';
+    }
+  }
+
+  function closeModal() {
+    var modalOverlay = document.getElementById('dict-modal-overlay');
+    if (modalOverlay) {
+      modalOverlay.style.display = 'none';
+    }
+  }
+
+  /**
+   * Main function called when user taps a word chip in Search Mode
+   */
+  async function lookupWord(word) {
+    if (!word) return;
+
+    var modalBody = document.getElementById('dict-modal-body');
+    if (modalBody) {
+      modalBody.innerHTML = '<div style="text-align: center; padding: 24px; color: #757575;">Searching definition for <strong>' + word + '</strong>...</div>';
+    }
+    openModal();
+
+    var result = await fetchOnlineDefinition(word);
+    renderModalContent(result);
+  }
+
+  /**
+   * Bind event handlers once DOM is ready
+   */
+  function init() {
+    var btnSearch = document.getElementById('btn-search');
+    if (btnSearch) {
+      btnSearch.onclick = function() {
+        toggleSearchMode();
+      };
+    }
+
+    var btnClose = document.getElementById('dict-modal-close');
+    if (btnClose) {
+      btnClose.onclick = function() {
+        closeModal();
+      };
+    }
+
+    var modalOverlay = document.getElementById('dict-modal-overlay');
+    if (modalOverlay) {
+      modalOverlay.onclick = function(e) {
+        if (e.target === modalOverlay) {
+          closeModal();
+        }
+      };
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
     });
   }
 
-  function escapeHtml(str) {
-    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
   }
+
+  // Expose module globally for front.html
+  window.NarabikaeDict = {
+    isSearchModeActive: isSearchModeActive,
+    toggleSearchMode: toggleSearchMode,
+    lookupWord: lookupWord,
+    closeModal: closeModal
+  };
 })();
