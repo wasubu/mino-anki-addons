@@ -1,4 +1,4 @@
-<!-- back.html - do not delete this line nor modify. v12 -->
+<!-- back.html - do not delete this line nor modify. v12.2 -->
 <div id="anki-back-flag" style="display:none;"></div>
 
 {{FrontSide}}
@@ -92,6 +92,19 @@
   var animFrameId = null;
   var isShowingRightAnswer = false;
   var isAnimating = false;
+
+  // Dictionary Lookup on Chip Click
+  if (shuffleContainer) {
+    shuffleContainer.addEventListener('click', function(e) {
+      var chip = e.target.closest('.word-chip');
+      if (!chip) return;
+      if (window.NarabikaeDict && window.NarabikaeDict.isSearchModeActive()) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.NarabikaeDict.lookupWord(chip.innerText);
+      }
+    });
+  }
 
   function syncBackTiming() {
     if (isAnimating) return; // Prevent transform collisions during motion
@@ -259,9 +272,25 @@
   window.initTimingSync();
 
   if (backResult) {
-    backResult.innerHTML = '<button id="btn-show-answer" class="btn-show-answer green-state">See the right answer</button>';
-    var btn = document.getElementById("btn-show-answer");
-    if (btn) btn.onclick = toggleAnswer;
+    backResult.innerHTML = [
+      '<div class="back-btn-container" style="display: flex; gap: 8px; width: 100%; box-sizing: border-box; align-items: center; margin-top: 12px;">',
+      '  <button id="btn-search" class="btn-search-mode" style="flex: 1; margin: 0;">🔍 Search</button>',
+      '  <button id="btn-show-answer" class="btn-show-answer green-state" style="flex: 2; margin: 0;">See the right answer</button>',
+      '</div>'
+    ].join('');
+
+    var btnShow = document.getElementById("btn-show-answer");
+    if (btnShow) btnShow.onclick = toggleAnswer;
+
+    var btnSearch = document.getElementById("btn-search");
+    if (btnSearch) {
+      btnSearch.onclick = function(e) {
+        e.preventDefault();
+        if (window.NarabikaeDict) {
+          window.NarabikaeDict.toggleSearchMode();
+        }
+      };
+    }
   }
 
   function toggleAnswer() {

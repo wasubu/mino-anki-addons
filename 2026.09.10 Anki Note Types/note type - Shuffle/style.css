@@ -1,4 +1,4 @@
-/* style.css - do not delete this line nor modify. v12 */
+/* style.css - do not delete this line nor modify. v12.2 */
 .shuffle-container, .shuffle-container * {
   box-sizing: border-box !important;
   margin: 0;
@@ -263,12 +263,16 @@
   outline: none !important;
 }
 
-/* --- Show Answer Controls --- */
-.shuffle-container .btn-show-answer {
+/* --- Bottom Control Buttons Container --- */
+.back-btn-container {
+  margin-top: 12px !important; /* Equalized to match source-box margin-top */
+}
+
+.shuffle-container .btn-show-answer,
+.shuffle-container .btn-search-mode {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  margin: 12px 0 6px 0;
   padding: 12px 18px;
   border-radius: 10px;
   font-weight: 600;
@@ -278,6 +282,24 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
 
+/* Gray Search Button */
+.shuffle-container .btn-search-mode {
+  background: #f1f3f5 !important;
+  color: #495057 !important;
+  border: 2px solid #ced4da !important;
+}
+
+.shuffle-container .btn-search-mode:hover {
+  background: #e9ecef !important;
+}
+
+.shuffle-container .btn-search-mode.active {
+  background: #6c757d !important;
+  color: #ffffff !important;
+  border-color: #6c757d !important;
+}
+
+/* Green Show Answer Button */
 .shuffle-container .btn-show-answer.green-state {
   background: #e8f5e9 !important;
   color: #2e7d32 !important;
@@ -298,11 +320,13 @@
   background: #bbdefb !important;
 }
 
-.shuffle-container .btn-show-answer:active {
+.shuffle-container .btn-show-answer:active,
+.shuffle-container .btn-search-mode:active {
   transform: scale(0.98);
 }
 
-.shuffle-container .btn-show-answer:disabled {
+.shuffle-container .btn-show-answer:disabled,
+.shuffle-container .btn-search-mode:disabled {
   opacity: 0.5;
   cursor: default;
   transform: none;
@@ -372,7 +396,23 @@
   outline: none !important;
 }
 
-/* Night Mode Toggle Buttons */
+/* Night Mode Control Buttons */
+.nightMode .shuffle-container .btn-search-mode {
+  background: #2b2b2b !important;
+  color: #dcdcdc !important;
+  border-color: #555555 !important;
+}
+
+.nightMode .shuffle-container .btn-search-mode:hover {
+  background: #3a3a3a !important;
+}
+
+.nightMode .shuffle-container .btn-search-mode.active {
+  background: #555555 !important;
+  color: #ffffff !important;
+  border-color: #777777 !important;
+}
+
 .nightMode .shuffle-container .btn-show-answer.green-state {
   background: #1b382b !important;
   color: #81c784 !important;
