@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v11.2 -->
+<!-- front.html - do not delete this line nor modify. v11.3 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -52,6 +52,12 @@
   }
   .shuffle-container .word-chip.locked-chip:hover {
     background-color: #d1f2eb !important;
+  }
+
+  /* Ensure word boxes keep items packed at the top without vertical stretching */
+  .word-box {
+    align-content: flex-start !important;
+    align-items: flex-start !important;
   }
 
   /* Active timing fill highlight for user-inserted chips (Blue) */
@@ -380,9 +386,7 @@
       targetBox.innerHTML = '';
       sourceBox.innerHTML = '';
 
-      var userWordsCount = selected.filter(function(i) { return !i.locked; }).length;
-
-      if (userWordsCount === 0) {
+      if (selected.length === 0) {
         var phBox = document.createElement('div');
         phBox.className = 'placeholder-box';
         phBox.innerText = 'Tap or drag words here...';
@@ -408,17 +412,27 @@
       if (!targetBox || !sourceBox) return;
 
       if (numLocked > 0 && !hasAnimatedLock) {
+        // 1. Temporarily put everything in source-box to measure the expanded height and start positions
         lockedItems.forEach(function(item) { available.push(item); });
         renderBoxes();
 
         var sourceElems = Array.from(sourceBox.querySelectorAll('[data-lock="true"]'));
         var startRects = sourceElems.map(function(el) { return el.getBoundingClientRect(); });
+        var expandedHeight = sourceBox.offsetHeight;
 
+        // 2. Move locked items to selected, leaving only movable items in available (source box)
         for (var i = 0; i < lockedItems.length; i++) {
           available.pop();
         }
         selected = lockedItems.slice();
         renderBoxes();
+
+        var collapsedHeight = sourceBox.offsetHeight;
+
+        // 3. Start expanded, then transition/shrink height down to collapsed height
+        sourceBox.style.height = expandedHeight + 'px';
+        sourceBox.style.overflow = 'hidden';
+        sourceBox.style.transition = 'height 0.8s ease-in-out';
 
         var targetElems = Array.from(targetBox.querySelectorAll('[data-lock="true"]'));
 
@@ -444,6 +458,10 @@
             setTimeout(function() {
               targetElem.classList.add('locked-chip');
               targetElem.style.animation = 'glide ' + (animDuration / 1000) + 's ease-in-out forwards, pop ' + (animDuration / 1000) + 's ease-in-out forwards';
+              if (i === 0) {
+                // Shrink source-box height from expanded down to collapsed height
+                sourceBox.style.height = collapsedHeight + 'px';
+              }
             }, animDelay);
 
             setTimeout(function() {
@@ -457,6 +475,13 @@
             }, animDelay + animDuration);
           }
         });
+
+        var maxTotalTime = 400 + ((lockedItems.length - 1) * 150) + 750 + 100;
+        setTimeout(function() {
+          sourceBox.style.height = '';
+          sourceBox.style.overflow = '';
+          sourceBox.style.transition = '';
+        }, maxTotalTime);
 
         hasAnimatedLock = true;
       } else {
@@ -536,8 +561,7 @@
         if (e.target === targetBox && !targetBox.contains(e.relatedTarget)) {
           removePlaceholder();
           var phBox = targetBox.querySelector('.placeholder-box');
-          var userWordsCount = selected.filter(function(i) { return !i.locked; }).length;
-          if (phBox && userWordsCount === 0) {
+          if (phBox && selected.length === 0) {
             phBox.style.display = 'inline-flex';
           }
         }
