@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v11.3 -->
+<!-- front.html - do not delete this line nor modify. v11.5 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -581,13 +581,12 @@
           }
         } else {
           selected.splice(draggedData.index, 1);
-          if (draggedData.index < insertIndex) insertIndex--;
           if (numLocked > 0) {
             insertIndex = Math.min(insertIndex, selected.length - numLocked);
           }
         }
 
-        insertIndex = Math.max(0, insertIndex);
+        insertIndex = Math.max(0, Math.min(insertIndex, selected.length));
         selected.splice(insertIndex, 0, draggedData.item);
         render();
       };
