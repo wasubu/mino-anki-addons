@@ -14,3 +14,12 @@ This note type is suppose to be paired with "only_again" tweak from the mino twe
 Hopefully I can make a tool to make these Timing numbers faster.
 
 **v12** - Quality of life improvements. Now dragging words on input box makes it disappear. before it would leave an after image and that was not desirable. Made the locked correct words animation start inside the word box instead of starting outside the word box. Highlight for locked correct words highlight is now green instead of blue. on 13+ words, it will add another locked correct words so 2. fixed where dragging and repositioning words won't land exactly where you put it.
+
+## How to run timingMaker.html
+You need to run this on a live server in vscode aswell to change the setting in it. go to the you user profile setting (JSON) and paste these.
+``` 
+"liveServer.settings.headers": {
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Embedder-Policy": "require-corp"
+}
+```

@@ -2,9 +2,40 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
   <title>Anki Timing Generator v6</title>
+
+  <!-- 1. Load coi-serviceworker FIRST before any script using SharedArrayBuffer -->
+  <script src="https://unpkg.com/coi-serviceworker/coi-serviceworker.min.js"></script>
+
+  <!-- 2. FFmpeg and styles -->
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Style for Download WebM Button Active Blue State */
+    .btn-download-webm {
+      background-color: #2a2f3d;
+      color: #8a94a6;
+      border: 1px solid #3a4154;
+      cursor: not-allowed;
+      transition: all 0.3s ease;
+      opacity: 0.6;
+    }
+
+    .btn-download-webm.blue-active {
+      background-color: #0066ff !important;
+      color: #ffffff !important;
+      border-color: #0052cc !important;
+      opacity: 1 !important;
+      cursor: pointer !important;
+      box-shadow: 0 0 12px rgba(0, 102, 255, 0.6);
+    }
+
+    .btn-download-webm.blue-active:hover {
+      background-color: #0052cc !important;
+      box-shadow: 0 0 16px rgba(0, 102, 255, 0.8);
+    }
+  </style>
 </head>
 <body>
 
@@ -17,12 +48,15 @@
     </div>
   </div>
 
-  <header>
+  <header style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px;">
     <h1>🎬 Anki Timing Generator v6</h1>
-    <label class="file-upload-btn">
-      📁 Load Media File
-      <input type="file" id="media-file" accept="video/*,audio/*">
-    </label>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <button class="btn btn-download-webm" id="btn-download-webm" disabled>⬇️ Download WebM</button>
+      <label class="file-upload-btn">
+        📁 Load Media File
+        <input type="file" id="media-file" accept="video/*,audio/*">
+      </label>
+    </div>
   </header>
 
   <div class="app-layout">
@@ -105,541 +139,631 @@
   <div class="toast" id="toast">Copied to Clipboard!</div>
 
   <script>
-    // --- State & History Engine (Ctrl+Z Support) ---
-    let historyStack = [];
-    let historyIndex = -1;
+// --- State & History Engine (Ctrl+Z Support) ---
+let historyStack = [];
+let historyIndex = -1;
 
-    let currentState = {
-      sentence: "",
-      markers: [] // Absolute timestamps in milliseconds
-    };
+let currentState = {
+  sentence: "",
+  markers: [] // Absolute timestamps in milliseconds
+};
 
-    let words = [];
-    let audioBuffer = null;
-    let draggedMarkerIdx = null;
-    let isScrubbing = false;
-    let hoveredMarkerIdx = null;
-    let hoveredWordIdx = null;
-    let dragCounter = 0; // Tracks drag events to prevent overlay flickering
+let words = [];
+let audioBuffer = null;
+let draggedMarkerIdx = null;
+let isScrubbing = false;
+let hoveredMarkerIdx = null;
+let hoveredWordIdx = null;
+let dragCounter = 0;
 
-    // Elements
-    const sentenceInput = document.getElementById('sentence-input');
-    const mediaFileInput = document.getElementById('media-file');
-    const fileNameDisplay = document.getElementById('file-name');
-    const video = document.getElementById('video-preview');
-    const canvas = document.getElementById('waveform-canvas');
-    const ctx = canvas.getContext('2d');
-    const timelineWrapper = document.getElementById('timeline-wrapper');
-    const wordsContainer = document.getElementById('words-container');
-    const outputTimings = document.getElementById('output-timings');
-    const btnPlay = document.getElementById('btn-play');
-    const btnCopy = document.getElementById('btn-copy');
-    const toast = document.getElementById('toast');
-    const dropOverlay = document.getElementById('drop-overlay');
-    const statWordCount = document.getElementById('stat-word-count');
-    const statDummyCount = document.getElementById('stat-dummy-count');
-    const statPutLastWord = document.getElementById('stat-put-last-word');
+// FFmpeg Conversion State & Logger
+let ffmpeg = null;
+let ffmpegLogs = [];
+let convertedWebmBlobUrl = null;
+let convertedFileName = '';
 
-    // --- State Stack Management ---
-    function pushState(newState) {
-      historyStack = historyStack.slice(0, historyIndex + 1);
-      const stateCopy = JSON.parse(JSON.stringify(newState));
-      historyStack.push(stateCopy);
-      historyIndex = historyStack.length - 1;
-      applyState(stateCopy);
-    }
+// Elements
+const sentenceInput = document.getElementById('sentence-input');
+const mediaFileInput = document.getElementById('media-file');
+const fileNameDisplay = document.getElementById('file-name');
+const video = document.getElementById('video-preview');
+const canvas = document.getElementById('waveform-canvas');
+const ctx = canvas.getContext('2d');
+const timelineWrapper = document.getElementById('timeline-wrapper');
+const wordsContainer = document.getElementById('words-container');
+const outputTimings = document.getElementById('output-timings');
+const btnPlay = document.getElementById('btn-play');
+const btnCopy = document.getElementById('btn-copy');
+const btnDownloadWebm = document.getElementById('btn-download-webm');
+const toast = document.getElementById('toast');
+const dropOverlay = document.getElementById('drop-overlay');
+const statWordCount = document.getElementById('stat-word-count');
+const statDummyCount = document.getElementById('stat-dummy-count');
+const statPutLastWord = document.getElementById('stat-put-last-word');
 
-    function undo() {
-      if (historyIndex > 0) {
-        historyIndex--;
-        applyState(historyStack[historyIndex]);
-      }
-    }
+// --- State Stack Management ---
+function pushState(newState) {
+  historyStack = historyStack.slice(0, historyIndex + 1);
+  const stateCopy = JSON.parse(JSON.stringify(newState));
+  historyStack.push(stateCopy);
+  historyIndex = historyStack.length - 1;
+  applyState(stateCopy);
+}
 
-    function redo() {
-      if (historyIndex < historyStack.length - 1) {
-        historyIndex++;
-        applyState(historyStack[historyIndex]);
-      }
-    }
+function undo() {
+  if (historyIndex > 0) {
+    historyIndex--;
+    applyState(historyStack[historyIndex]);
+  }
+}
 
-    function applyState(state) {
-      currentState = JSON.parse(JSON.stringify(state));
-      if (sentenceInput.value !== currentState.sentence) {
-        sentenceInput.value = currentState.sentence;
-      }
-      words = currentState.sentence ? currentState.sentence.split(/\s+/).filter(Boolean) : [];
-      
-      updateStats();
-      renderWords();
-      
-      if (document.activeElement !== outputTimings) {
-        updateOutput();
-      }
-      drawTimeline();
-    }
+function redo() {
+  if (historyIndex < historyStack.length - 1) {
+    historyIndex++;
+    applyState(historyStack[historyIndex]);
+  }
+}
 
-    // --- Calculate & Update Statistics ---
-    function updateStats() {
-      const wordCount = words.length;
-      statWordCount.textContent = wordCount;
+function applyState(state) {
+  currentState = JSON.parse(JSON.stringify(state));
+  if (sentenceInput.value !== currentState.sentence) {
+    sentenceInput.value = currentState.sentence;
+  }
+  words = currentState.sentence ? currentState.sentence.split(/\s+/).filter(Boolean) : [];
+  
+  updateStats();
+  renderWords();
+  
+  if (document.activeElement !== outputTimings) {
+    updateOutput();
+  }
+  drawTimeline();
+}
 
-      if (wordCount === 0) {
-        statDummyCount.textContent = 0;
-        statPutLastWord.textContent = 0;
-        return;
-      }
+// --- Calculate & Update Statistics ---
+function updateStats() {
+  const wordCount = words.length;
+  statWordCount.textContent = wordCount;
 
-      // Dummy Count = if word is 5 or below then 2, otherwise 1
-      const dummyCount = (wordCount <= 5) ? 2 : 1;
-      statDummyCount.textContent = dummyCount;
+  if (wordCount === 0) {
+    statDummyCount.textContent = 0;
+    statPutLastWord.textContent = 0;
+    return;
+  }
 
-      // Put Last Word = 0 if none or <= 5; 1 if 6-11; 2 if 12+
-      let putLastWord = 0;
-      if (wordCount >= 13) {
-        putLastWord = 2;
-      } else if (wordCount >= 6) {
-        putLastWord = 1;
-      } else {
-        putLastWord = 0;
-      }
-      statPutLastWord.textContent = putLastWord;
-    }
+  const dummyCount = (wordCount <= 5) ? 2 : 1;
+  statDummyCount.textContent = dummyCount;
 
-    // --- Resize Canvas ---
-    function resizeCanvas() {
-      canvas.width = timelineWrapper.clientWidth * window.devicePixelRatio;
-      canvas.height = timelineWrapper.clientHeight * window.devicePixelRatio;
-      drawTimeline();
-    }
-    window.addEventListener('resize', resizeCanvas);
+  let putLastWord = 0;
+  if (wordCount >= 13) {
+    putLastWord = 2;
+  } else if (wordCount >= 6) {
+    putLastWord = 1;
+  } else {
+    putLastWord = 0;
+  }
+  statPutLastWord.textContent = putLastWord;
+}
 
-    // --- Core Media Loader Function ---
-    async function loadMediaFile(file) {
-      if (!file) return;
+// --- Resize Canvas ---
+function resizeCanvas() {
+  canvas.width = timelineWrapper.clientWidth * window.devicePixelRatio;
+  canvas.height = timelineWrapper.clientHeight * window.devicePixelRatio;
+  drawTimeline();
+}
+window.addEventListener('resize', resizeCanvas);
 
-      fileNameDisplay.textContent = file.name;
-      video.src = URL.createObjectURL(file);
+// --- Reset Download Button State ---
+function resetDownloadButton() {
+  if (convertedWebmBlobUrl) {
+    URL.revokeObjectURL(convertedWebmBlobUrl);
+    convertedWebmBlobUrl = null;
+  }
+  convertedFileName = '';
+  ffmpegLogs = [];
+  btnDownloadWebm.disabled = true;
+  btnDownloadWebm.classList.remove('blue-active');
+  btnDownloadWebm.textContent = '⬇️ Download WebM';
+}
 
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        drawTimeline();
-      } catch (err) {
-        console.warn('Audio waveform decode bypassed:', err);
-        audioBuffer = null;
-        drawTimeline();
-      }
-    }
+// --- FFmpeg In-Browser Conversion Function ---
+async function convertToWebmIfNeeded(file) {
+  const extension = file.name.split('.').pop().toLowerCase();
 
-    // File Input change
-    mediaFileInput.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files[0]) {
-        loadMediaFile(e.target.files[0]);
-      }
-    });
+  if (extension === 'webm') {
+    resetDownloadButton();
+    btnDownloadWebm.textContent = '✅ Already WebM';
+    return;
+  }
 
-    // --- Drag and Drop Overlay Event Listeners ---
-    window.addEventListener('dragenter', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounter++;
-      
-      if (e.dataTransfer.types && (e.dataTransfer.types.includes('Files') || e.dataTransfer.types[0] === 'Files')) {
-        dropOverlay.classList.add('active');
-      }
-    });
+  resetDownloadButton();
+  btnDownloadWebm.textContent = '⏳ Loading FFmpeg...';
 
-    window.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-    });
-
-    window.addEventListener('dragleave', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounter--;
-      if (dragCounter <= 0) {
-        dragCounter = 0;
-        dropOverlay.classList.remove('active');
-      }
-    });
-
-    window.addEventListener('drop', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounter = 0;
-      dropOverlay.classList.remove('active');
-
-      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        loadMediaFile(e.dataTransfer.files[0]);
-      }
-    });
-
-    // --- Draw Upside-Down House Marker ---
-    function drawUpsideDownHouse(x, y, width, height, roofHeight, color, isHovered) {
-      const hw = width / 2;
-      ctx.beginPath();
-      ctx.moveTo(x - hw, y); // Top Left
-      ctx.lineTo(x + hw, y); // Top Right
-      ctx.lineTo(x + hw, y + height - roofHeight); // Right Wall
-      ctx.lineTo(x, y + height); // Pointy Tip pointing DOWN
-      ctx.lineTo(x - hw, y + height - roofHeight); // Left Wall
-      ctx.closePath();
-
-      ctx.fillStyle = color;
-      ctx.fill();
-      ctx.strokeStyle = isHovered ? '#ffffff' : '#000000';
-      ctx.lineWidth = 1.5 * window.devicePixelRatio;
-      ctx.stroke();
-    }
-
-    // --- Timeline Renderer ---
-    function drawTimeline() {
-      const w = canvas.width;
-      const h = canvas.height;
-      const scale = window.devicePixelRatio;
-      ctx.clearRect(0, 0, w, h);
-
-      // Background
-      ctx.fillStyle = '#0a0c10';
-      ctx.fillRect(0, 0, w, h);
-
-      const duration = video.duration || 1;
-
-      // 1. Audio Waveform
-      if (audioBuffer) {
-        const rawData = audioBuffer.getChannelData(0);
-        const step = Math.ceil(rawData.length / w);
-        const amp = h / 2;
-
-        ctx.fillStyle = '#262c3a';
-        ctx.beginPath();
-        for (let i = 0; i < w; i++) {
-          let min = 1.0, max = -1.0;
-          for (let j = 0; j < step; j++) {
-            const datum = rawData[(i * step) + j];
-            if (datum < min) min = datum;
-            if (datum > max) max = datum;
-          }
-          ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
-        }
-      }
-
-      // 2. Draw Draggable House Markers
-      currentState.markers.forEach((ms, idx) => {
-        const x = (ms / 1000 / duration) * w;
-        const isHovered = (hoveredMarkerIdx === idx || draggedMarkerIdx === idx || hoveredWordIdx === idx);
-
-        // Vertical Guide Line
-        ctx.strokeStyle = isHovered ? '#ff6b81' : '#ff4757';
-        ctx.lineWidth = (isHovered ? 3 : 2) * scale;
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, h);
-        ctx.stroke();
-
-        // Upside-Down House Marker Handle at Top
-        const markerWidth = (isHovered ? 18 : 16) * scale;
-        const markerHeight = (isHovered ? 28 : 26) * scale;
-        const roofHeight = 10 * scale;
-        drawUpsideDownHouse(x, 2 * scale, markerWidth, markerHeight, roofHeight, isHovered ? '#ff6b81' : '#ff4757', isHovered);
-
-        // Marker Label Number
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${9.5 * scale}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.fillText(idx + 1, x, 14 * scale);
-      });
-
-      // 3. Playhead Line
-      const curTime = video.currentTime || 0;
-      const playheadX = (curTime / duration) * w;
-
-      ctx.strokeStyle = '#00f2fe';
-      ctx.lineWidth = 2 * scale;
-      ctx.beginPath();
-      ctx.moveTo(playheadX, 0);
-      ctx.lineTo(playheadX, h);
-      ctx.stroke();
-
-      // Playhead Top Handle
-      ctx.fillStyle = '#00f2fe';
-      ctx.beginPath();
-      ctx.arc(playheadX, 6 * scale, 5 * scale, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // --- Real-time Animation Loop ---
-    function animate() {
-      drawTimeline();
-      updateActiveWordHighlight();
-      requestAnimationFrame(animate);
-    }
-    requestAnimationFrame(animate);
-
-    // --- Video Active Word Highlight Logic ---
-    function updateActiveWordHighlight() {
-      if (!video || currentState.markers.length === 0) return;
-
-      const currentTimeMs = video.currentTime * 1000;
-      let activeIdx = -1;
-
-      for (let i = currentState.markers.length - 1; i >= 0; i--) {
-        if (currentTimeMs >= currentState.markers[i]) {
-          const nextTime = (i < currentState.markers.length - 1) ? currentState.markers[i + 1] : (currentState.markers[i] + 600);
-          if (currentTimeMs < nextTime) {
-            activeIdx = i;
-          }
-          break;
-        }
-      }
-
-      const chips = wordsContainer.querySelectorAll('.word-chip');
-      chips.forEach((chip, idx) => {
-        if (idx === activeIdx) {
-          chip.classList.add('timing-active');
-        } else {
-          chip.classList.remove('timing-active');
-        }
-
-        // Also add hover highlight if linked marker or word is hovered
-        if (hoveredMarkerIdx === idx || hoveredWordIdx === idx) {
-          chip.classList.add('hover-highlight');
-        } else {
-          chip.classList.remove('hover-highlight');
+  try {
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    if (!ffmpeg) {
+      ffmpeg = createFFmpeg({
+        log: true,
+        logger: ({ message }) => {
+          console.log(message);
+          ffmpegLogs.push(message);
         }
       });
     }
 
-    // --- Strict Hit-Test ONLY for Upside-Down House Top Region ---
-    function getHouseHandleIndexAtPos(clientX, clientY) {
-      if (!video.duration) return null;
-      const rect = timelineWrapper.getBoundingClientRect();
-      const clickX = clientX - rect.left;
-      const clickY = clientY - rect.top;
-      const duration = video.duration;
-
-      // Strict boundaries: Handle is strictly between y=0 and y=28px inside canvas
-      if (clickY < 0 || clickY > 28) return null;
-
-      for (let i = 0; i < currentState.markers.length; i++) {
-        const markerX = (currentState.markers[i] / 1000 / duration) * rect.width;
-        if (Math.abs(markerX - clickX) <= 10) {
-          return i;
-        }
-      }
-      return null;
+    if (!ffmpeg.isLoaded()) {
+      await ffmpeg.load();
     }
 
-    timelineWrapper.addEventListener('mousedown', (e) => {
-      const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
-      if (hitIdx !== null) {
-        draggedMarkerIdx = hitIdx;
-        
-        // PAUSE VIDEO ON DRAG TO PREVENT STUTTER
-        if (!video.paused) {
-          video.pause();
-        }
-      } else {
-        isScrubbing = true;
-        seekToMouse(e);
-      }
+    ffmpeg.setProgress(({ ratio }) => {
+      const pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+      btnDownloadWebm.textContent = `⏳ Converting (${pct}%)...`;
     });
 
-    window.addEventListener('mousemove', (e) => {
-      const rect = timelineWrapper.getBoundingClientRect();
+    const inputName = `input_${Date.now()}.${extension}`;
+    const outputName = `output_${Date.now()}.webm`;
 
-      // Update hover cursor
-      const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
-      if (hitIdx !== null || draggedMarkerIdx !== null) {
-        timelineWrapper.style.cursor = 'ew-resize';
-        hoveredMarkerIdx = (draggedMarkerIdx !== null) ? draggedMarkerIdx : hitIdx;
-      } else {
-        timelineWrapper.style.cursor = 'pointer';
-        hoveredMarkerIdx = null;
-      }
+    ffmpeg.FS('writeFile', inputName, await fetchFile(file));
 
-      if (draggedMarkerIdx !== null && video.duration) {
-        const mouseX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-        const newTimeMs = Math.round((mouseX / rect.width) * video.duration * 1000);
+    // Sanitized FFmpeg WASM parameters (removed internal single-quotes and multi-threading flags)
+    await ffmpeg.run(
+      '-i', inputName,
+      '-vf', 'scale=-2:min(720\\,ih)',
+      '-c:v', 'libvpx-vp9',
+      '-crf', '32',
+      '-b:v', '0',
+      '-pix_fmt', 'yuv420p',
+      '-af', 'loudnorm=I=-14:TP=-1.0:LRA=11',
+      '-c:a', 'libopus',
+      '-b:a', '96k',
+      '-y', outputName
+    );
 
-        // Update marker timestamp live
-        currentState.markers[draggedMarkerIdx] = newTimeMs;
-        currentState.markers.sort((a, b) => a - b);
-        draggedMarkerIdx = currentState.markers.indexOf(newTimeMs);
+    const data = ffmpeg.FS('readFile', outputName);
+    const blob = new Blob([data.buffer], { type: 'video/webm' });
+    convertedWebmBlobUrl = URL.createObjectURL(blob);
 
-        renderWords();
-        updateOutput();
-        drawTimeline();
-      } else if (isScrubbing) {
-        seekToMouse(e);
-      }
+    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+    convertedFileName = `${baseName}_anki.webm`;
+
+    ffmpeg.FS('unlink', inputName);
+    ffmpeg.FS('unlink', outputName);
+
+    btnDownloadWebm.disabled = false;
+    btnDownloadWebm.classList.add('blue-active');
+    btnDownloadWebm.textContent = '⬇️ Download WebM';
+
+    video.src = convertedWebmBlobUrl;
+
+  } catch (err) {
+    console.error('FFmpeg web conversion failed:', err);
+    ffmpegLogs.push(`JS Exception: ${err.message || err}`);
+    btnDownloadWebm.disabled = false;
+    btnDownloadWebm.classList.add('blue-active');
+    btnDownloadWebm.textContent = '❌ Conversion Failed (Click for Logs)';
+  }
+}
+
+// --- Download / Log Copy Click Listener ---
+btnDownloadWebm.addEventListener('click', () => {
+  if (convertedWebmBlobUrl) {
+    const a = document.createElement('a');
+    a.href = convertedWebmBlobUrl;
+    a.download = convertedFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } else if (ffmpegLogs.length > 0) {
+    const logOutput = ffmpegLogs.join('\n');
+    navigator.clipboard.writeText(logOutput).then(() => {
+      toast.textContent = 'Logs copied to Clipboard!';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
     });
+  }
+});
 
-    window.addEventListener('mouseup', () => {
-      if (draggedMarkerIdx !== null) {
-        pushState(currentState);
-        draggedMarkerIdx = null;
+// --- Core Media Loader Function ---
+async function loadMediaFile(file) {
+  if (!file) return;
+
+  fileNameDisplay.textContent = file.name;
+  video.src = URL.createObjectURL(file);
+
+  convertToWebmIfNeeded(file);
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    drawTimeline();
+  } catch (err) {
+    console.warn('Audio waveform decode bypassed:', err);
+    audioBuffer = null;
+    drawTimeline();
+  }
+}
+
+mediaFileInput.addEventListener('change', (e) => {
+  if (e.target.files && e.target.files[0]) {
+    loadMediaFile(e.target.files[0]);
+  }
+});
+
+// --- Drag and Drop Overlay ---
+window.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter++;
+  
+  if (e.dataTransfer.types && (e.dataTransfer.types.includes('Files') || e.dataTransfer.types[0] === 'Files')) {
+    dropOverlay.classList.add('active');
+  }
+});
+
+window.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+window.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter--;
+  if (dragCounter <= 0) {
+    dragCounter = 0;
+    dropOverlay.classList.remove('active');
+  }
+});
+
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter = 0;
+  dropOverlay.classList.remove('active');
+
+  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    loadMediaFile(e.dataTransfer.files[0]);
+  }
+});
+
+// --- Draw Markers & Timeline ---
+function drawUpsideDownHouse(x, y, width, height, roofHeight, color, isHovered) {
+  const hw = width / 2;
+  ctx.beginPath();
+  ctx.moveTo(x - hw, y);
+  ctx.lineTo(x + hw, y);
+  ctx.lineTo(x + hw, y + height - roofHeight);
+  ctx.lineTo(x, y + height);
+  ctx.lineTo(x - hw, y + height - roofHeight);
+  ctx.closePath();
+
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.strokeStyle = isHovered ? '#ffffff' : '#000000';
+  ctx.lineWidth = 1.5 * window.devicePixelRatio;
+  ctx.stroke();
+}
+
+function drawTimeline() {
+  const w = canvas.width;
+  const h = canvas.height;
+  const scale = window.devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  ctx.fillStyle = '#0a0c10';
+  ctx.fillRect(0, 0, w, h);
+
+  const duration = video.duration || 1;
+
+  if (audioBuffer) {
+    const rawData = audioBuffer.getChannelData(0);
+    const step = Math.ceil(rawData.length / w);
+    const amp = h / 2;
+
+    ctx.fillStyle = '#262c3a';
+    ctx.beginPath();
+    for (let i = 0; i < w; i++) {
+      let min = 1.0, max = -1.0;
+      for (let j = 0; j < step; j++) {
+        const datum = rawData[(i * step) + j];
+        if (datum < min) min = datum;
+        if (datum > max) max = datum;
       }
-      isScrubbing = false;
-    });
-
-    function seekToMouse(e) {
-      if (!video.duration) return;
-      const rect = timelineWrapper.getBoundingClientRect();
-      const clickX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-      video.currentTime = (clickX / rect.width) * video.duration;
+      ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
     }
+  }
 
-    // --- Marker Action: Press 'A' ---
-    function addMarkerAtCurrentTime() {
-      if (currentState.markers.length >= words.length) return;
+  currentState.markers.forEach((ms, idx) => {
+    const x = (ms / 1000 / duration) * w;
+    const isHovered = (hoveredMarkerIdx === idx || draggedMarkerIdx === idx || hoveredWordIdx === idx);
 
-      const currentMs = Math.round(video.currentTime * 1000);
-      const nextState = JSON.parse(JSON.stringify(currentState));
-      nextState.markers.push(currentMs);
-      nextState.markers.sort((a, b) => a - b);
+    ctx.strokeStyle = isHovered ? '#ff6b81' : '#ff4757';
+    ctx.lineWidth = (isHovered ? 3 : 2) * scale;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
 
-      pushState(nextState);
-    }
+    const markerWidth = (isHovered ? 18 : 16) * scale;
+    const markerHeight = (isHovered ? 28 : 26) * scale;
+    const roofHeight = 10 * scale;
+    drawUpsideDownHouse(x, 2 * scale, markerWidth, markerHeight, roofHeight, isHovered ? '#ff6b81' : '#ff4757', isHovered);
 
-    // --- Input Text Change Handler (MARKERS PRESERVED) ---
-    sentenceInput.addEventListener('input', handleSentenceChange);
-    sentenceInput.addEventListener('change', handleSentenceChange);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${9.5 * scale}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(idx + 1, x, 14 * scale);
+  });
 
-    function handleSentenceChange() {
-      const newText = sentenceInput.value.trim();
-      if (newText !== currentState.sentence) {
-        pushState({
-          sentence: newText,
-          markers: currentState.markers
-        });
+  const curTime = video.currentTime || 0;
+  const playheadX = (curTime / duration) * w;
+
+  ctx.strokeStyle = '#00f2fe';
+  ctx.lineWidth = 2 * scale;
+  ctx.beginPath();
+  ctx.moveTo(playheadX, 0);
+  ctx.lineTo(playheadX, h);
+  ctx.stroke();
+
+  ctx.fillStyle = '#00f2fe';
+  ctx.beginPath();
+  ctx.arc(playheadX, 6 * scale, 5 * scale, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function animate() {
+  drawTimeline();
+  updateActiveWordHighlight();
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+function updateActiveWordHighlight() {
+  if (!video || currentState.markers.length === 0) return;
+
+  const currentTimeMs = video.currentTime * 1000;
+  let activeIdx = -1;
+
+  for (let i = currentState.markers.length - 1; i >= 0; i--) {
+    if (currentTimeMs >= currentState.markers[i]) {
+      const nextTime = (i < currentState.markers.length - 1) ? currentState.markers[i + 1] : (currentState.markers[i] + 600);
+      if (currentTimeMs < nextTime) {
+        activeIdx = i;
       }
+      break;
+    }
+  }
+
+  const chips = wordsContainer.querySelectorAll('.word-chip');
+  chips.forEach((chip, idx) => {
+    if (idx === activeIdx) {
+      chip.classList.add('timing-active');
+    } else {
+      chip.classList.remove('timing-active');
     }
 
-    // --- Editable Timings Box Handler ---
-    outputTimings.addEventListener('blur', parseTimingsFromInput);
-    outputTimings.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        outputTimings.blur();
-      }
-    });
-
-    function parseTimingsFromInput() {
-      const inputVal = outputTimings.value.trim();
-      if (!inputVal) return;
-
-      const intervals = inputVal.split(',').map(v => parseInt(v.trim(), 10)).filter(n => !isNaN(n));
-      if (intervals.length === 0) return;
-
-      let cumulativeMs = 0;
-      const newMarkers = [];
-      for (let i = 0; i < intervals.length; i++) {
-        cumulativeMs += intervals[i];
-        newMarkers.push(cumulativeMs);
-      }
-
-      pushState({
-        sentence: currentState.sentence,
-        markers: newMarkers
-      });
+    if (hoveredMarkerIdx === idx || hoveredWordIdx === idx) {
+      chip.classList.add('hover-highlight');
+    } else {
+      chip.classList.remove('hover-highlight');
     }
+  });
+}
 
-    // Hotkeys Listener
-    window.addEventListener('keydown', (e) => {
-      if (document.activeElement === sentenceInput || document.activeElement === outputTimings) return;
+function getHouseHandleIndexAtPos(clientX, clientY) {
+  if (!video.duration) return null;
+  const rect = timelineWrapper.getBoundingClientRect();
+  const clickX = clientX - rect.left;
+  const clickY = clientY - rect.top;
+  const duration = video.duration;
 
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        if (e.shiftKey) {
-          redo();
-        } else {
-          undo();
-        }
-      } else if (e.code === 'KeyA') {
-        e.preventDefault();
-        addMarkerAtCurrentTime();
-      } else if (e.code === 'Space') {
-        e.preventDefault();
-        togglePlay();
-      }
-    });
+  if (clickY < 0 || clickY > 28) return null;
 
-    function togglePlay() {
-      if (video.paused) {
-        video.play();
-      } else {
-        video.pause();
-      }
+  for (let i = 0; i < currentState.markers.length; i++) {
+    const markerX = (currentState.markers[i] / 1000 / duration) * rect.width;
+    if (Math.abs(markerX - clickX) <= 10) {
+      return i;
     }
+  }
+  return null;
+}
 
-    btnPlay.addEventListener('click', togglePlay);
-
-    // --- Relative Interval Calculation for Output ---
-    function calculateIntervals(markers) {
-      if (!markers || markers.length === 0) return '0';
-      return markers.map((ms, idx) => {
-        if (idx === 0) return ms;
-        return Math.max(0, ms - markers[idx - 1]);
-      }).join(', ');
+timelineWrapper.addEventListener('mousedown', (e) => {
+  const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
+  if (hitIdx !== null) {
+    draggedMarkerIdx = hitIdx;
+    if (!video.paused) {
+      video.pause();
     }
+  } else {
+    isScrubbing = true;
+    seekToMouse(e);
+  }
+});
 
-    function updateOutput() {
-      outputTimings.value = calculateIntervals(currentState.markers);
-    }
+window.addEventListener('mousemove', (e) => {
+  const rect = timelineWrapper.getBoundingClientRect();
 
-    // --- Render Word Progress Chips ---
-    function renderWords() {
-      wordsContainer.innerHTML = '';
-      words.forEach((word, idx) => {
-        const chip = document.createElement('div');
-        let className = 'word-chip';
-        if (currentState.markers[idx] !== undefined) className += ' marked';
+  const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
+  if (hitIdx !== null || draggedMarkerIdx !== null) {
+    timelineWrapper.style.cursor = 'ew-resize';
+    hoveredMarkerIdx = (draggedMarkerIdx !== null) ? draggedMarkerIdx : hitIdx;
+  } else {
+    timelineWrapper.style.cursor = 'pointer';
+    hoveredMarkerIdx = null;
+  }
 
-        chip.className = className;
-        chip.innerHTML = `
-          <span>${word}</span>
-          ${currentState.markers[idx] !== undefined ? `<span class="time-tag">${(currentState.markers[idx] / 1000).toFixed(2)}s</span>` : ''}
-        `;
+  if (draggedMarkerIdx !== null && video.duration) {
+    const mouseX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const newTimeMs = Math.round((mouseX / rect.width) * video.duration * 1000);
 
-        chip.addEventListener('click', () => {
-          if (currentState.markers[idx] !== undefined) {
-            video.currentTime = currentState.markers[idx] / 1000;
-          }
-        });
+    currentState.markers[draggedMarkerIdx] = newTimeMs;
+    currentState.markers.sort((a, b) => a - b);
+    draggedMarkerIdx = currentState.markers.indexOf(newTimeMs);
 
-        // Hover word chip highlights corresponding timeline marker
-        chip.addEventListener('mouseenter', () => {
-          hoveredWordIdx = idx;
-          drawTimeline();
-        });
+    renderWords();
+    updateOutput();
+    drawTimeline();
+  } else if (isScrubbing) {
+    seekToMouse(e);
+  }
+});
 
-        chip.addEventListener('mouseleave', () => {
-          hoveredWordIdx = null;
-          drawTimeline();
-        });
+window.addEventListener('mouseup', () => {
+  if (draggedMarkerIdx !== null) {
+    pushState(currentState);
+    draggedMarkerIdx = null;
+  }
+  isScrubbing = false;
+});
 
-        wordsContainer.appendChild(chip);
-      });
-    }
+function seekToMouse(e) {
+  if (!video.duration) return;
+  const rect = timelineWrapper.getBoundingClientRect();
+  const clickX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+  video.currentTime = (clickX / rect.width) * video.duration;
+}
 
-    // --- Copy Button with Bottom-Left Notifier ---
-    btnCopy.addEventListener('click', () => {
-      navigator.clipboard.writeText(outputTimings.value).then(() => {
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 2000);
-      });
-    });
+function addMarkerAtCurrentTime() {
+  if (currentState.markers.length >= words.length) return;
 
-    // Initial Setup
+  const currentMs = Math.round(video.currentTime * 1000);
+  const nextState = JSON.parse(JSON.stringify(currentState));
+  nextState.markers.push(currentMs);
+  nextState.markers.sort((a, b) => a - b);
+
+  pushState(nextState);
+}
+
+sentenceInput.addEventListener('input', handleSentenceChange);
+sentenceInput.addEventListener('change', handleSentenceChange);
+
+function handleSentenceChange() {
+  const newText = sentenceInput.value.trim();
+  if (newText !== currentState.sentence) {
     pushState({
-      sentence: sentenceInput.value.trim(),
-      markers: []
+      sentence: newText,
+      markers: currentState.markers
     });
-    resizeCanvas();
+  }
+}
+
+outputTimings.addEventListener('blur', parseTimingsFromInput);
+outputTimings.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    outputTimings.blur();
+  }
+});
+
+function parseTimingsFromInput() {
+  const inputVal = outputTimings.value.trim();
+  if (!inputVal) return;
+
+  const intervals = inputVal.split(',').map(v => parseInt(v.trim(), 10)).filter(n => !isNaN(n));
+  if (intervals.length === 0) return;
+
+  let cumulativeMs = 0;
+  const newMarkers = [];
+  for (let i = 0; i < intervals.length; i++) {
+    cumulativeMs += intervals[i];
+    newMarkers.push(cumulativeMs);
+  }
+
+  pushState({
+    sentence: currentState.sentence,
+    markers: newMarkers
+  });
+}
+
+window.addEventListener('keydown', (e) => {
+  if (document.activeElement === sentenceInput || document.activeElement === outputTimings) return;
+
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    if (e.shiftKey) {
+      redo();
+    } else {
+      undo();
+    }
+  } else if (e.code === 'KeyA') {
+    e.preventDefault();
+    addMarkerAtCurrentTime();
+  } else if (e.code === 'Space') {
+    e.preventDefault();
+    togglePlay();
+  }
+});
+
+function togglePlay() {
+  if (video.paused) {
+    video.play();
+  } else {
+    video.pause();
+  }
+}
+
+btnPlay.addEventListener('click', togglePlay);
+
+function calculateIntervals(markers) {
+  if (!markers || markers.length === 0) return '0';
+  return markers.map((ms, idx) => {
+    if (idx === 0) return ms;
+    return Math.max(0, ms - markers[idx - 1]);
+  }).join(', ');
+}
+
+function updateOutput() {
+  outputTimings.value = calculateIntervals(currentState.markers);
+}
+
+function renderWords() {
+  wordsContainer.innerHTML = '';
+  words.forEach((word, idx) => {
+    const chip = document.createElement('div');
+    let className = 'word-chip';
+    if (currentState.markers[idx] !== undefined) className += ' marked';
+
+    chip.className = className;
+    chip.innerHTML = `
+      <span>${word}</span>
+      ${currentState.markers[idx] !== undefined ? `<span class="time-tag">${(currentState.markers[idx] / 1000).toFixed(2)}s</span>` : ''}
+    `;
+
+    chip.addEventListener('click', () => {
+      if (currentState.markers[idx] !== undefined) {
+        video.currentTime = currentState.markers[idx] / 1000;
+      }
+    });
+
+    chip.addEventListener('mouseenter', () => {
+      hoveredWordIdx = idx;
+      drawTimeline();
+    });
+
+    chip.addEventListener('mouseleave', () => {
+      hoveredWordIdx = null;
+      drawTimeline();
+    });
+
+    wordsContainer.appendChild(chip);
+  });
+}
+
+btnCopy.addEventListener('click', () => {
+  navigator.clipboard.writeText(outputTimings.value).then(() => {
+    toast.textContent = 'Copied to Clipboard!';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  });
+});
+
+pushState({
+  sentence: sentenceInput.value.trim(),
+  markers: []
+});
+resizeCanvas();
   </script>
 </body>
 </html>
