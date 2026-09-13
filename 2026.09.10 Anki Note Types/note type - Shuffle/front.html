@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v12.1 -->
+<!-- front.html - do not delete this line nor modify. v12.2 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -83,6 +83,33 @@
     box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
     z-index: 2;
     transition: background-color 0.1s ease, transform 0.1s ease, box-shadow 0.1s ease;
+  }
+
+  /* iOS Jiggle Animation when Search Mode is Active */
+  @keyframes ios-jiggle-1 {
+    0% { transform: rotate(-1.5deg) translate(0px, 0px); }
+    50% { transform: rotate(1.5deg) translate(-0.5px, -0.5px); }
+    100% { transform: rotate(-1.5deg) translate(0px, 0px); }
+  }
+
+  @keyframes ios-jiggle-2 {
+    0% { transform: rotate(1.5deg) translate(0.5px, -0.5px); }
+    50% { transform: rotate(-1.2deg) translate(-0.5px, 0.5px); }
+    100% { transform: rotate(1.5deg) translate(0.5px, -0.5px); }
+  }
+
+  .shuffle-container.search-active .word-chip {
+    animation: ios-jiggle-1 0.22s ease-in-out infinite;
+    cursor: pointer !important;
+  }
+
+  .shuffle-container.search-active .word-chip:nth-child(even) {
+    animation: ios-jiggle-2 0.25s ease-in-out infinite;
+    animation-delay: -0.07s;
+  }
+
+  .shuffle-container.search-active .word-chip:nth-child(3n) {
+    animation-delay: -0.14s;
   }
 
   .target-box .placeholder-box {
@@ -282,6 +309,20 @@
 <script>
 (function() {
   if (document.getElementById('anki-back-flag')) return;
+
+  // --- Search Mode Jiggle Sync Observer ---
+  var searchBtn = document.getElementById('btn-search');
+  var shuffleContainer = document.querySelector('.shuffle-container');
+  if (searchBtn && shuffleContainer) {
+    var observer = new MutationObserver(function() {
+      if (searchBtn.classList.contains('search-mode-active')) {
+        shuffleContainer.classList.add('search-active');
+      } else {
+        shuffleContainer.classList.remove('search-active');
+      }
+    });
+    observer.observe(searchBtn, { attributes: true, attributeFilter: ['class'] });
+  }
 
   // --- Timing Sync Engine ---
   var timingElem = document.getElementById('hidden-timing');
