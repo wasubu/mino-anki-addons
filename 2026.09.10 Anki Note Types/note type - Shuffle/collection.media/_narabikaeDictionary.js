@@ -1,4 +1,4 @@
-// _narabikaeDictionary.js - do not modify nor delete this line - v6
+// _narabikaeDictionary.js - do not modify nor delete this line - v7
 /**
  * _narabikaeDictionary.js
  * Dictionary Lookup & Offline Caching Module for Anki Sentence Ordering
@@ -209,16 +209,16 @@
     return searchModeActive;
   }
 
-  function toggleSearchMode() {
+function toggleSearchMode() {
     searchModeActive = !searchModeActive;
-    var btn = document.getElementById('btn-search');
-    if (btn) {
+    var btns = document.querySelectorAll('#btn-search, #btn-search-back, .btn-search');
+    btns.forEach(function(btn) {
       if (searchModeActive) {
         btn.classList.add('search-mode-active');
       } else {
         btn.classList.remove('search-mode-active');
       }
-    }
+    });
     return searchModeActive;
   }
 
@@ -512,42 +512,44 @@
     renderModalContent(result);
   }
 
-  function init() {
+    function init() {
     injectStyles();
 
     if (enableClearCache) {
-      clearCache();
+        clearCache();
     }
 
-    var btnSearch = document.getElementById('btn-search');
-    if (btnSearch) {
-      btnSearch.onclick = function() {
+    var btns = document.querySelectorAll(
+        "#btn-search, #btn-search-back, .btn-search",
+    );
+    btns.forEach(function (btnSearch) {
+        btnSearch.onclick = function () {
         toggleSearchMode();
-      };
-    }
-
-    var btnClose = document.getElementById('dict-modal-close');
-    if (btnClose) {
-      btnClose.onclick = function() {
-        closeModal();
-      };
-    }
-
-    var modalOverlay = document.getElementById('dict-modal-overlay');
-    if (modalOverlay) {
-      modalOverlay.onclick = function(e) {
-        if (e.target === modalOverlay) {
-          closeModal();
-        }
-      };
-    }
-
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        closeModal();
-      }
+        };
     });
-  }
+
+    var btnClose = document.getElementById("dict-modal-close");
+    if (btnClose) {
+        btnClose.onclick = function () {
+        closeModal();
+        };
+    }
+
+    var modalOverlay = document.getElementById("dict-modal-overlay");
+    if (modalOverlay) {
+        modalOverlay.onclick = function (e) {
+        if (e.target === modalOverlay) {
+            closeModal();
+        }
+        };
+    }
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+        closeModal();
+        }
+    });
+    }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

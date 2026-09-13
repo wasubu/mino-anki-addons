@@ -1,4 +1,4 @@
-<!-- back.html - do not delete this line nor modify. v12.3 -->
+<!-- back.html - do not delete this line nor modify. v12.4 -->
 <div id="anki-back-flag" style="display:none;"></div>
 
 {{FrontSide}}
@@ -297,7 +297,10 @@
       btnSearch.onclick = function(e) {
         e.preventDefault();
         if (window.NarabikaeDict) {
-          window.NarabikaeDict.toggleSearchMode();
+          var isActive = window.NarabikaeDict.toggleSearchMode();
+          if (shuffleContainer) {
+            shuffleContainer.classList.toggle('search-active', isActive);
+          }
         }
       };
 
