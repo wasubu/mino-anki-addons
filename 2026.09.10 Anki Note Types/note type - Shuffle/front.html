@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v12 -->
+<!-- front.html - do not delete this line nor modify. v12.1 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -101,6 +101,123 @@
     line-height: 1.2;
   }
 
+  /* Control buttons layout */
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .btn-reset, .btn-search {
+    padding: 8px 16px;
+    border-radius: 6px;
+    background-color: #eceff1;
+    color: #37474f;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-reset:hover, .btn-search:hover {
+    background-color: #cfd8dc;
+  }
+  .btn-search.search-mode-active {
+    background-color: #0288d1 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 8px rgba(2, 136, 209, 0.5);
+  }
+
+  /* Search Modal Overlay */
+  .dict-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+    animation: fadeInModal 0.2s ease-out;
+  }
+
+  .dict-modal-card {
+    position: relative;
+    background: #ffffff;
+    color: #212121;
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  .dict-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    font-weight: bold;
+    color: #757575;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 50%;
+  }
+  .dict-modal-close:hover {
+    color: #000;
+    background: #f0f0f0;
+  }
+
+  .dict-header {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 1.4em;
+    color: #1a237e;
+    border-bottom: 2px solid #e8eaf6;
+    padding-bottom: 8px;
+  }
+
+  .dict-example-item {
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: #f5f5f5;
+    border-left: 4px solid #3f51b5;
+    border-radius: 4px;
+  }
+  .dict-example-jp {
+    font-size: 1.05em;
+    font-weight: bold;
+    color: #212121;
+    margin-bottom: 4px;
+  }
+  .dict-example-en {
+    font-size: 0.9em;
+    color: #616161;
+  }
+  .dict-highlight {
+    color: #d32f2f;
+    font-weight: bold;
+  }
+
+  @keyframes fadeInModal {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
   @keyframes glide {
     from { translate: var(--dx) var(--dy); }
     to { translate: 0 0; }
@@ -148,8 +265,19 @@
 
   <div class="controls">
     <div class="btn-reset" role="button" onclick="resetShuffle()">↺ Reset</div>
+    <div class="btn-search" role="button" id="btn-search">🔍 Search</div>
   </div>
 </div>
+
+<!-- Dictionary Overlay Modal Container -->
+<div id="dict-modal-overlay" class="dict-modal-overlay" style="display: none;">
+  <div class="dict-modal-card">
+    <button class="dict-modal-close" id="dict-modal-close">&times;</button>
+    <div id="dict-modal-body"></div>
+  </div>
+</div>
+
+<script src="_narabikaeDictionary.js"></script>
 
 <script>
 (function() {
@@ -424,16 +552,25 @@
         lockedItems.forEach(function(item) { available.push(item); });
         renderBoxes();
 
+        // Measure relative offsets inside sourceBox before moving chips to targetBox
         var sourceElems = Array.from(sourceBox.querySelectorAll('[data-lock="true"]'));
-        var startRects = sourceElems.map(function(el) { return el.getBoundingClientRect(); });
+        var sourceBoxRect1 = sourceBox.getBoundingClientRect();
+        var startOffsets = sourceElems.map(function(el) {
+          var rect = el.getBoundingClientRect();
+          return {
+            left: rect.left - sourceBoxRect1.left,
+            top: rect.top - sourceBoxRect1.top
+          };
+        });
         var expandedHeight = sourceBox.offsetHeight;
 
         for (var i = 0; i < lockedItems.length; i++) {
           available.pop();
         }
         selected = lockedItems.slice();
-        renderBoxes();
+        renderBoxes(); // targetBox expands, pushing sourceBox down to sourceBoxRect2
 
+        var sourceBoxRect2 = sourceBox.getBoundingClientRect();
         var collapsedHeight = sourceBox.offsetHeight;
 
         sourceBox.style.height = expandedHeight + 'px';
@@ -444,11 +581,16 @@
 
         targetElems.forEach(function(targetElem, i) {
           var sourceElem = sourceElems[i];
-          var startRect = startRects[i];
-          if (sourceElem && targetElem && startRect) {
+          var startOffset = startOffsets[i];
+          if (sourceElem && targetElem && startOffset) {
             var endRect = targetElem.getBoundingClientRect();
-            var dx = startRect.left - endRect.left;
-            var dy = startRect.top - endRect.top;
+            
+            // Calculate absolute start position based on sourceBox's NEW post-render position
+            var actualStartLeft = sourceBoxRect2.left + startOffset.left;
+            var actualStartTop = sourceBoxRect2.top + startOffset.top;
+
+            var dx = actualStartLeft - endRect.left;
+            var dy = actualStartTop - endRect.top;
 
             targetElem.classList.remove('locked-chip');
             targetElem.style.setProperty('--dx', dx + 'px');
@@ -503,7 +645,14 @@
         chip.className = 'word-chip active-chip locked-chip';
         chip.innerText = item.text;
         chip.draggable = false;
-        chip.onclick = function(e) { e.stopPropagation(); };
+        chip.onclick = function(e) {
+          if (window.NarabikaeDict && window.NarabikaeDict.isSearchModeActive()) {
+            e.stopPropagation();
+            window.NarabikaeDict.lookupWord(item.text);
+            return;
+          }
+          e.stopPropagation();
+        };
         return chip;
       }
 
@@ -511,7 +660,13 @@
       chip.innerText = item.text;
       chip.draggable = true;
 
-      chip.onclick = function() {
+      chip.onclick = function(e) {
+        if (window.NarabikaeDict && window.NarabikaeDict.isSearchModeActive()) {
+          e.stopPropagation();
+          window.NarabikaeDict.lookupWord(item.text);
+          return;
+        }
+
         if (location === 'target') {
           selected.splice(index, 1);
           available.push(item);
@@ -527,6 +682,10 @@
       };
 
       chip.addEventListener('dragstart', function(e) {
+        if (window.NarabikaeDict && window.NarabikaeDict.isSearchModeActive()) {
+          e.preventDefault();
+          return false;
+        }
         draggedData = { item: item, location: location, index: index };
         placeholder.style.width = chip.offsetWidth + 'px';
         e.dataTransfer.effectAllowed = 'move';
