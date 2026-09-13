@@ -1,7 +1,7 @@
 // _narabikaeDictionary.js - do not modify nor delete this line - v0
 /**
  * _narabikaeDictionary.js
- * Dictionary Lookup & Offline Caching Module for Anki Sentence Ordering Cards
+ * Web Search Translation & Offline Cache Module for Anki Sentence Ordering
  */
 
 (function() {
@@ -10,8 +10,17 @@
   var searchModeActive = false;
   var CACHE_PREFIX = 'narabikae_dict_cache_';
 
-  // Built-in offline fallback dictionary for common words
-  var LOCAL_DICTIONARY = {
+  // Offline pre-built fallbacks for common words in case device has no internet on first launch
+  var LOCAL_FALLBACKS = {
+    "to": {
+      word: "To",
+      japanese: "〜へ / 〜に",
+      reading: "へ / に",
+      examples: [
+        { jp: "学校<span class=\"dict-highlight\">へ</span>行く", en: "Go <span class=\"dict-highlight\">to</span> school." },
+        { jp: "彼<span class=\"dict-highlight\">に</span>話す", en: "Talk <span class=\"dict-highlight\">to</span> him." }
+      ]
+    },
     "worry": {
       word: "Worry",
       japanese: "心配",
@@ -23,25 +32,19 @@
     },
     "worried": {
       word: "Worried",
-      japanese: "心配",
-      reading: "しんぱい",
+      japanese: "心配して",
+      reading: "しんぱいして",
       examples: [
         { jp: "僕は<span class=\"dict-highlight\">心配</span>してた", en: "I was <span class=\"dict-highlight\">worried</span>." },
-        { jp: "彼女はとても<span class=\"dict-highlight\">心配</span>している。", en: "She is very <span class=\"dict-highlight\">worried</span>." }
+        { jp: "彼女は<span class=\"dict-highlight\">心配</span>している", en: "She is <span class=\"dict-highlight\">worried</span>." }
       ]
     }
   };
 
-  /**
-   * Check if Search mode is currently active
-   */
   function isSearchModeActive() {
     return searchModeActive;
   }
 
-  /**
-   * Toggle Search Mode on/off
-   */
   function toggleSearchMode() {
     searchModeActive = !searchModeActive;
     var btn = document.getElementById('btn-search');
@@ -59,8 +62,20 @@
     return (w || '').trim().toLowerCase().replace(/[^\w]/g, '');
   }
 
+  function capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  }
+
+  function highlightWord(text, target) {
+    if (!text || !target) return text;
+    var escaped = target.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    var regex = new RegExp('(' + escaped + ')', 'gi');
+    return text.replace(regex, '<span class="dict-highlight">$1</span>');
+  }
+
   /**
-   * Read cached lookup from localStorage (for offline/instant use)
+   * Cache Management (Saves queries locally to collection.media storage)
    */
   function getCachedResult(word) {
     var key = CACHE_PREFIX + cleanWord(word);
@@ -70,108 +85,120 @@
         return JSON.parse(cached);
       }
     } catch (e) {
-      console.warn("LocalStorage read error:", e);
+      console.warn("Cache read error:", e);
     }
     return null;
   }
 
-  /**
-   * Save fetched lookup to localStorage (caching for collection.media / offline storage)
-   */
   function saveCachedResult(word, data) {
     var key = CACHE_PREFIX + cleanWord(word);
     try {
       localStorage.setItem(key, JSON.stringify(data));
     } catch (e) {
-      console.warn("LocalStorage write error:", e);
+      console.warn("Cache write error:", e);
     }
   }
 
   /**
-   * Fetch dictionary definition and sentence translation
+   * Online Translation Fetch (MyMemory API - Native CORS support, EN to JA)
    */
   async function fetchOnlineDefinition(rawWord) {
     var word = cleanWord(rawWord);
     if (!word) return null;
 
-    // 1. Check local cache (Offline First)
+    // 1. Check local offline cache first
     var cached = getCachedResult(word);
     if (cached) return cached;
 
-    // 2. Check local fallback entries
-    if (LOCAL_DICTIONARY[word]) {
-      var localData = LOCAL_DICTIONARY[word];
-      saveCachedResult(word, localData);
-      return localData;
-    }
-
-    // 3. Fetch from API when online (Jisho API via CORS proxy)
+    // 2. Fetch live translation and example sentence matches from the Web
     try {
-      var targetUrl = 'https://jisho.org/api/v1/search/words?keyword=' + encodeURIComponent(word);
-      var proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
-      var res = await fetch(proxyUrl);
-      
+      var apiUrl = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(rawWord) + '&langpair=en|ja';
+      var res = await fetch(apiUrl);
+
       if (res.ok) {
         var data = await res.json();
-        if (data && data.data && data.data.length > 0) {
-          var item = data.data[0];
-          var japaneseObj = item.japanese[0] || {};
-          var kanji = japaneseObj.word || japaneseObj.reading || rawWord;
-          var reading = japaneseObj.reading || '';
-          
-          var senses = item.senses || [];
-          var primarySense = senses[0] && senses[0].english_definitions ? senses[0].english_definitions.join(', ') : '';
+        if (data && data.responseData && data.responseData.translatedText) {
+          var mainTranslation = data.responseData.translatedText;
+          var examples = [];
+
+          // Extract translation memory matches for example sentences
+          if (Array.isArray(data.matches)) {
+            var seen = new Set();
+            for (var i = 0; i < data.matches.length; i++) {
+              var m = data.matches[i];
+              var enText = (m.segment || '').trim();
+              var jpText = (m.translation || '').trim();
+
+              if (enText && jpText && enText.toLowerCase() !== jpText.toLowerCase() && !seen.has(enText.toLowerCase())) {
+                seen.add(enText.toLowerCase());
+
+                var highlightedEn = highlightWord(enText, rawWord);
+                var highlightedJp = highlightWord(jpText, mainTranslation);
+
+                examples.push({
+                  jp: highlightedJp,
+                  en: highlightedEn
+                });
+
+                if (examples.length >= 3) break;
+              }
+            }
+          }
+
+          if (examples.length === 0) {
+            examples.push({
+              jp: "<span class=\"dict-highlight\">" + mainTranslation + "</span>",
+              en: "<span class=\"dict-highlight\">" + rawWord + "</span>"
+            });
+          }
 
           var entry = {
-            word: rawWord,
-            japanese: kanji,
-            reading: reading,
-            meanings: primarySense,
-            examples: [
-              {
-                jp: kanji + " (" + (reading || kanji) + ")",
-                en: "Definition: <span class=\"dict-highlight\">" + primarySense + "</span>"
-              }
-            ]
+            word: capitalize(rawWord),
+            japanese: mainTranslation,
+            reading: "",
+            examples: examples
           };
 
+          // Save to local cache for instant offline reuse
           saveCachedResult(word, entry);
           return entry;
         }
       }
     } catch (err) {
-      console.log("Online fetch error, using fallback format:", err);
+      console.warn("Live web lookup failed, falling back:", err);
     }
 
-    // Fallback if lookup failed or offline without cache
-    var fallbackEntry = {
-      word: rawWord,
+    // 3. Check built-in fallbacks if offline
+    if (LOCAL_FALLBACKS[word]) {
+      var fallback = LOCAL_FALLBACKS[word];
+      saveCachedResult(word, fallback);
+      return fallback;
+    }
+
+    // 4. Default notice if completely offline without cache
+    return {
+      word: capitalize(rawWord),
       japanese: rawWord,
-      reading: "―",
+      reading: "",
       examples: [
         {
           jp: "<span class=\"dict-highlight\">" + rawWord + "</span> の検索結果が見つかりませんでした。",
-          en: "No translation cached for <span class=\"dict-highlight\">" + rawWord + "</span>."
+          en: "Could not retrieve online translation for <span class=\"dict-highlight\">" + rawWord + "</span>."
         }
       ]
     };
-    return fallbackEntry;
   }
 
   /**
-   * Render dictionary details inside modal
+   * Modal Display Handler
    */
   function renderModalContent(data) {
     var modalBody = document.getElementById('dict-modal-body');
     if (!modalBody) return;
 
-    var headingTitle = (data.word || '') + ' (' + (data.japanese || '') + (data.reading ? ' • ' + data.reading : '') + ')';
+    var headerText = data.word + ' (' + data.japanese + (data.reading ? ' • ' + data.reading : '') + ')';
     
-    var html = '<h3 class="dict-header">#' + headingTitle + '</h3>';
-
-    if (data.meanings) {
-      html += '<div style="margin-bottom: 12px; font-size: 0.9em; color: #616161;"><strong>Definition:</strong> ' + data.meanings + '</div>';
-    }
+    var html = '<h3 class="dict-header">#' + headerText + '</h3>';
 
     if (data.examples && data.examples.length > 0) {
       data.examples.forEach(function(ex) {
@@ -180,8 +207,6 @@
         html += '  <div class="dict-example-en">' + ex.en + '</div>';
         html += '</div>';
       });
-    } else {
-      html += '<div style="color: #888;">No example sentences found.</div>';
     }
 
     modalBody.innerHTML = html;
@@ -201,9 +226,6 @@
     }
   }
 
-  /**
-   * Main function called when user taps a word chip in Search Mode
-   */
   async function lookupWord(word) {
     if (!word) return;
 
@@ -217,9 +239,6 @@
     renderModalContent(result);
   }
 
-  /**
-   * Bind event handlers once DOM is ready
-   */
   function init() {
     var btnSearch = document.getElementById('btn-search');
     if (btnSearch) {
@@ -257,7 +276,6 @@
     init();
   }
 
-  // Expose module globally for front.html
   window.NarabikaeDict = {
     isSearchModeActive: isSearchModeActive,
     toggleSearchMode: toggleSearchMode,
