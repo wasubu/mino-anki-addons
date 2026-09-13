@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v11.5 -->
+<!-- front.html - do not delete this line nor modify. v11.6 -->
 <style>
   .video-wrapper {
     position: relative;
@@ -42,6 +42,9 @@
   }
   .shuffle-container .word-chip.dragging {
     opacity: 0.3;
+  }
+  .shuffle-container .word-chip.drag-hidden {
+    display: none !important;
   }
   .shuffle-container .word-chip.locked-chip {
     background-color: #e8f5e9 !important;
@@ -348,7 +351,7 @@
     }
 
     function getDragAfterElement(container, x, y) {
-      var chips = Array.from(container.querySelectorAll('.word-chip:not(.dragging):not(.locked-chip)'));
+      var chips = Array.from(container.querySelectorAll('.word-chip:not(.dragging):not(.drag-hidden):not(.locked-chip)'));
       for (var i = 0; i < chips.length; i++) {
         var box = chips[i].getBoundingClientRect();
         var boxCenter = box.left + box.width / 2;
@@ -523,15 +526,26 @@
 
       chip.addEventListener('dragstart', function(e) {
         draggedData = { item: item, location: location, index: index };
-        chip.classList.add('dragging');
         placeholder.style.width = chip.offsetWidth + 'px';
         e.dataTransfer.effectAllowed = 'move';
+
+        if (location === 'target') {
+          setTimeout(function() {
+            chip.classList.add('drag-hidden');
+          }, 0);
+        } else {
+          chip.classList.add('dragging');
+        }
       });
 
       chip.addEventListener('dragend', function() {
         chip.classList.remove('dragging');
+        chip.classList.remove('drag-hidden');
         removePlaceholder();
-        draggedData = null;
+        if (draggedData) {
+          draggedData = null;
+          render();
+        }
       });
 
       return chip;
@@ -570,7 +584,7 @@
       targetBox.ondrop = function(e) {
         e.preventDefault();
         if (!draggedData) return;
-        var children = Array.from(targetBox.querySelectorAll('.word-chip:not(.dragging), .chip-placeholder'));
+        var children = Array.from(targetBox.querySelectorAll('.word-chip:not(.dragging):not(.drag-hidden), .chip-placeholder'));
         var insertIndex = children.indexOf(placeholder);
         if (insertIndex === -1) insertIndex = selected.length;
 
@@ -588,6 +602,7 @@
 
         insertIndex = Math.max(0, Math.min(insertIndex, selected.length));
         selected.splice(insertIndex, 0, draggedData.item);
+        draggedData = null;
         render();
       };
 
@@ -602,6 +617,7 @@
         if (draggedData.location === 'target') {
           selected.splice(draggedData.index, 1);
           available.push(draggedData.item);
+          draggedData = null;
           render();
         }
       };
