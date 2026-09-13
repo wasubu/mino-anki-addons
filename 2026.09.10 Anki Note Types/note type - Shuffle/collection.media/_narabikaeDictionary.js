@@ -1,4 +1,4 @@
-// _narabikaeDictionary.js - do not modify nor delete this line - v5
+// _narabikaeDictionary.js - do not modify nor delete this line - v6
 /**
  * _narabikaeDictionary.js
  * Dictionary Lookup & Offline Caching Module for Anki Sentence Ordering
@@ -495,6 +495,11 @@
 
   async function lookupWord(word) {
     if (!word) return;
+
+    // Turn off Search Mode when a word is clicked
+    if (searchModeActive) {
+      toggleSearchMode();
+    }
 
     var clean = sanitizeWord(word);
     var modalBody = document.getElementById('dict-modal-body');
