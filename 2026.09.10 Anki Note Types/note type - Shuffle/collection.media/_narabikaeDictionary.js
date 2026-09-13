@@ -1,8 +1,8 @@
-// _narabikaeDictionary.js - do not modify nor delete this line - v1
+// _narabikaeDictionary.js - do not modify nor delete this line - v2
 /**
  * _narabikaeDictionary.js
  * Dictionary Lookup & Offline Caching Module for Anki Sentence Ordering
- * Powered by Jotoba API (Sentence Pairs with Native CORS) & Google GTX
+ * Powered by Jotoba API (Sentence Pairs) & Google GTX (Translation & Furigana)
  */
 
 (function() {
@@ -45,10 +45,24 @@
   };
 
   /**
-   * Romaji to Hiragana Transliteration Engine
+   * Enhanced Romaji to Hiragana Transliteration Engine
+   * Handles Hepburn macrons (ō, ā, ū, ē, ī), hyphens (-), apostrophes ('), and double consonants (っ)
    */
   function romajiToHiragana(romaji) {
     if (!romaji) return '';
+    if (/[\u3040-\u30ff\u4e00-\u9faf]/.test(romaji)) return romaji;
+
+    var str = romaji.toLowerCase().trim();
+
+    // Normalize Hepburn macrons & symbols
+    str = str
+      .replace(/[āâ]/g, 'aa')
+      .replace(/[īî]/g, 'ii')
+      .replace(/[ūû]/g, 'uu')
+      .replace(/[ēê]/g, 'ee')
+      .replace(/[ōô]/g, 'ou')
+      .replace(/['\-]/g, '');
+
     var map = {
       'a':'あ','i':'い','u':'う','e':'え','o':'お',
       'ka':'か','ki':'き','ku':'く','ke':'け','ko':'こ',
@@ -78,12 +92,16 @@
       'pya':'ぴゃ','pyu':'ぴゅ','pyo':'ぴょ'
     };
 
-    var str = romaji.toLowerCase().trim();
-    if (/[\u3040-\u30ff\u4e00-\u9faf]/.test(str)) return str;
-
     var res = '';
     var i = 0;
     while (i < str.length) {
+      // Handle sokuon (small tsu っ) for double consonants
+      if (i + 1 < str.length && str[i] === str[i+1] && /[bcdfghjklmpqrstvwxyz]/.test(str[i]) && str[i] !== 'n') {
+        res += 'っ';
+        i++;
+        continue;
+      }
+
       var match = false;
       for (var len = 3; len >= 1; len--) {
         var chunk = str.substr(i, len);
@@ -95,7 +113,6 @@
         }
       }
       if (!match) {
-        res += str[i];
         i++;
       }
     }
@@ -160,12 +177,17 @@
   }
 
   function cleanWord(w) {
-    return (w || '').trim().toLowerCase().replace(/[^\w]/g, '');
+    return (w || '').trim().toLowerCase().replace(/^[^\w]+|[^\w]+$/g, '').replace(/[^\w]/g, '');
+  }
+
+  function sanitizeWord(str) {
+    return (str || '').replace(/^[^\w]+|[^\w]+$/g, '').trim();
   }
 
   function capitalize(str) {
     if (!str) return '';
-    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    var s = sanitizeWord(str);
+    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
   }
 
   function decodeHTMLEntities(str) {
@@ -301,7 +323,7 @@
             var rawJp = item.content || item.japanese || '';
             var enText = decodeHTMLEntities(item.translation || item.english || '').trim();
 
-            // Strips Jotoba furigana bracket notation: "[食|た]べる" -> "食べる"
+            // Strips Jotoba furigana notation: "[食|た]べる" -> "食べる"
             var jpText = decodeHTMLEntities(rawJp.replace(/\[([^|\]]+)\|?[^\]]*\]/g, '$1')).trim();
 
             if (isValidExamplePair(enText, jpText) && !seen.has(enText.toLowerCase())) {
@@ -309,7 +331,7 @@
 
               examples.push({
                 jp: highlightWord(jpText, japaneseKanji),
-                en: highlightWord(enText, rawWord)
+                en: highlightWord(enText, clean)
               });
             }
             if (examples.length >= 3) break;
@@ -400,13 +422,14 @@
   async function lookupWord(word) {
     if (!word) return;
 
+    var clean = sanitizeWord(word);
     var modalBody = document.getElementById('dict-modal-body');
     if (modalBody) {
-      modalBody.innerHTML = '<div style="text-align: center; padding: 24px; color: #757575;">Searching definition for <strong>' + word + '</strong>...</div>';
+      modalBody.innerHTML = '<div style="text-align: center; padding: 24px; color: #757575;">Searching definition for <strong>' + clean + '</strong>...</div>';
     }
     openModal();
 
-    var result = await fetchOnlineDefinition(word);
+    var result = await fetchOnlineDefinition(clean);
     renderModalContent(result);
   }
 
