@@ -1,4 +1,4 @@
-/* style.css - do not delete this line nor modify. v1 */
+/* style.css - do not delete this line nor modify. v1.1 */
 /* 1. Main Card Container */
 .card {
     font-family: Arial, sans-serif;
@@ -45,8 +45,8 @@
 /* 5. Background / Watermark Image */
 img {
     position: absolute;
-    left: 5px;
-    top: 10px;
+    left: -114px;
+    top: -4px;
     opacity: 0.1;
     max-width: 500px;
     max-height: 500px;
@@ -72,9 +72,9 @@ img {
 
 /* 7. Mobile Adjustments */
 @media (max-width: 750px) {
-    img {
-        left: -30px;
-        top: 90px;
+    .eigoKunImg {
+        left: -125px;
+        top: 87px;
         max-width: 400px;
         max-height: 400px;
     }
