@@ -1,0 +1,269 @@
+<!-- Default Mobile/AnkiDroid View -->
+<div id="mobile-view">
+  {{Front}}
+  <br>
+  {{type:Back}}
+</div>
+
+<!-- Custom Desktop View -->
+<div id="desktop-view" style="display: none;">
+  {{Front}}
+
+  <div id="img-container">
+    {{Images}}
+  </div>
+
+  <br>
+
+  [[typebox:Back]]
+</div>
+
+<!-- ORIGINAL THE OTHER ONE IS EDITED in AUG 28 2026
+ <script>
+(function() {
+  // Check if running on Anki Desktop vs Mobile
+  const isAndroid = typeof AnkiDroidJS !== 'undefined' || /Android/i.test(navigator.userAgent);
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isMobile = isAndroid || isIOS;
+
+  if (!isMobile) {
+    // Show Desktop layout & hide Mobile layout
+    document.getElementById("desktop-view").style.display = "block";
+    document.getElementById("mobile-view").style.display = "none";
+
+    // 1. Random Image Script
+    const container = document.getElementById("img-container");
+    if (container) {
+      const imgs = container.getElementsByTagName("img");
+      if (imgs.length > 0) {
+        const index = Math.floor(Math.random() * imgs.length);
+        sessionStorage.setItem("randomImageIndex", index);
+
+        for (let i = 0; i < imgs.length; i++) {
+          imgs[i].style.display = "none";
+        }
+        imgs[index].style.display = "block";
+      }
+    }
+
+    // 2. Typebox Enter Key Listener Script
+    function waitForInputAndBindEnter(retries = 10) {
+      const input = document.querySelector("#desktop-view input[type='text']");
+      const ta = document.querySelector("#desktop-view textarea");
+
+      const el = input || ta;
+      if (el) {
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (typeof pycmd !== 'undefined') {
+              pycmd("ans");
+            }
+          }
+        });
+
+        el.setAttribute("autocomplete", "off");
+        el.setAttribute("spellcheck", "false");
+        el.style.boxSizing = "border-box";
+        el.style.width = "100%";
+        if (ta) {
+          el.rows = 1;
+          el.style.resize = "none";
+        }
+      } else if (retries > 0) {
+        setTimeout(() => waitForInputAndBindEnter(retries - 1), 100);
+      }
+    }
+
+    setTimeout(waitForInputAndBindEnter, 50);
+  }
+})();
+</script> -->
+
+<script>
+(function() {
+  const isAndroid = typeof AnkiDroidJS !== 'undefined' || /Android/i.test(navigator.userAgent);
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isMobile = isAndroid || isIOS;
+
+  function applyPasswordMirror(input) {
+    if (!input || input.dataset.mirrored) return;
+    input.dataset.mirrored = "true";
+
+    const FONT_SCALE = 0.9;
+
+    const style = window.getComputedStyle(input);
+    let textColor = style.color;
+    if (!textColor || textColor === "transparent" || textColor === "rgba(0, 0, 0, 0)") {
+      textColor = window.getComputedStyle(document.body).color || "#ffffff";
+    }
+
+    const baseFontSize = parseFloat(style.fontSize) || 16;
+    const scaledFontSize = (baseFontSize * FONT_SCALE) + "px";
+
+    // Force password type for Gboard
+    input.type = "password";
+    input.setAttribute("autocomplete", "new-password");
+    input.setAttribute("autocorrect", "off");
+    input.setAttribute("autocapitalize", "none");
+    input.setAttribute("spellcheck", "false");
+
+    // 1. Custom blinking cursor CSS
+    if (!document.getElementById("anki-caret-style")) {
+      const styleEl = document.createElement("style");
+      styleEl.id = "anki-caret-style";
+      styleEl.innerHTML = `
+        @keyframes custom-caret-blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        .custom-caret {
+          display: inline-block;
+          width: 2px;
+          height: 1.1em;
+          background-color: currentColor;
+          animation: custom-caret-blink 1s infinite;
+          vertical-align: middle;
+          margin-left: 1px;
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }
+
+    // 2. Wrapper strictly constrained to input box width
+    const wrapper = document.createElement("div");
+    wrapper.style.position = "relative";
+    wrapper.style.display = "block";
+    wrapper.style.width = "100%";
+    wrapper.style.maxWidth = "100%";
+    wrapper.style.boxSizing = "border-box";
+    wrapper.style.overflow = "hidden"; // Prevents text from spilling out off-screen
+
+    // 3. Visual text layer ABOVE input box
+    const mirror = document.createElement("div");
+    mirror.style.position = "absolute";
+    mirror.style.top = "0";
+    mirror.style.left = "0";
+    mirror.style.width = "100%";
+    mirror.style.height = "100%";
+    mirror.style.pointerEvents = "none";
+    mirror.style.zIndex = "10";
+    mirror.style.display = "block";
+    mirror.style.padding = style.padding;
+    mirror.style.fontSize = scaledFontSize;
+    mirror.style.fontFamily = style.fontFamily;
+    mirror.style.fontWeight = style.fontWeight;
+    mirror.style.lineHeight = style.lineHeight !== "normal" ? style.lineHeight : style.height;
+    mirror.style.textAlign = style.textAlign;
+    mirror.style.color = textColor;
+    mirror.style.whiteSpace = "pre";
+    mirror.style.overflow = "hidden"; // Clips text inside input box boundaries
+    mirror.style.boxSizing = "border-box";
+
+    input.style.fontSize = scaledFontSize;
+    input.style.width = "100%";
+    input.style.boxSizing = "border-box";
+
+    // Restructure DOM
+    input.parentNode.insertBefore(wrapper, input);
+    wrapper.appendChild(input);
+    wrapper.appendChild(mirror);
+
+    // Hide password dots and native caret
+    input.style.color = "transparent";
+    input.style.caretColor = "transparent";
+
+    // 4. Update mirrored text & calculate caret-driven scrolling
+    function updateMirror() {
+      const val = input.value;
+      const pos = typeof input.selectionStart === "number" ? input.selectionStart : val.length;
+      const before = val.substring(0, pos);
+      const after = val.substring(pos);
+
+      mirror.innerHTML = "";
+      mirror.appendChild(document.createTextNode(before));
+
+      let caret = null;
+      if (document.activeElement === input) {
+        caret = document.createElement("span");
+        caret.className = "custom-caret";
+        mirror.appendChild(caret);
+      }
+
+      mirror.appendChild(document.createTextNode(after));
+
+      // Scroll mirror based on caret location relative to input box width
+      if (caret) {
+        const caretX = caret.offsetLeft;
+        const containerWidth = mirror.clientWidth;
+        const currentScroll = mirror.scrollLeft;
+        const paddingRight = 24; // Padding from right edge of input box
+
+        if (caretX - currentScroll > containerWidth - paddingRight) {
+          mirror.scrollLeft = caretX - containerWidth + paddingRight;
+        } else if (caretX < currentScroll + 10) {
+          mirror.scrollLeft = Math.max(0, caretX - 10);
+        }
+      }
+    }
+
+    ["input", "keyup", "keydown", "focus", "blur", "click", "select"].forEach(evt => {
+      input.addEventListener(evt, updateMirror);
+    });
+
+    updateMirror();
+  }
+
+  if (!isMobile) {
+    document.getElementById("desktop-view").style.display = "block";
+    document.getElementById("mobile-view").style.display = "none";
+
+    const container = document.getElementById("img-container");
+    if (container) {
+      const imgs = container.getElementsByTagName("img");
+      if (imgs.length > 0) {
+        const index = Math.floor(Math.random() * imgs.length);
+        sessionStorage.setItem("randomImageIndex", index);
+        for (let i = 0; i < imgs.length; i++) imgs[i].style.display = "none";
+        imgs[index].style.display = "block";
+      }
+    }
+
+    function waitForInputAndBindEnter(retries = 10) {
+      const input = document.querySelector("#desktop-view input[type='text']");
+      const ta = document.querySelector("#desktop-view textarea");
+      const el = input || ta;
+
+      if (el) {
+        el.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (typeof pycmd !== 'undefined') pycmd("ans");
+          }
+        });
+        el.setAttribute("autocomplete", "off");
+        el.setAttribute("spellcheck", "false");
+        el.style.boxSizing = "border-box";
+        el.style.width = "100%";
+        if (ta) {
+          el.rows = 1;
+          el.style.resize = "none";
+        }
+      } else if (retries > 0) {
+        setTimeout(() => waitForInputAndBindEnter(retries - 1), 100);
+      }
+    }
+    setTimeout(waitForInputAndBindEnter, 50);
+
+  } else {
+    function initMobileFix() {
+      const input = document.getElementById("typeans");
+      if (input) applyPasswordMirror(input);
+    }
+
+    const observer = new MutationObserver(initMobileFix);
+    observer.observe(document.body, { childList: true, subtree: true });
+    initMobileFix();
+  }
+})();
+</script>
