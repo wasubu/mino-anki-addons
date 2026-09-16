@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v0 -->
+<!-- front.html - do not delete this line nor modify. v0.1 -->
 <div class="front-text">
   {{Front}}
 </div>
@@ -11,24 +11,31 @@
   const container = document.querySelector(".front-text");
   if (!container) return;
 
-  const images = Array.from(container.querySelectorAll("img"));
-  const imagesHTML = images.map(img => img.outerHTML).join("");
+  // 1. Capture both <img> and <svg> elements
+  const mediaElements = Array.from(container.querySelectorAll("img, svg"));
+  const mediaHTML = mediaElements.map(el => el.outerHTML).join("");
 
-  let textContent = container.innerHTML
+  // 2. Clone container and remove media so SVG text labels don't mix into choices
+  const textClone = container.cloneNode(true);
+  textClone.querySelectorAll("img, svg").forEach(el => el.remove());
+
+  // 3. Convert HTML line breaks to newline characters
+  let rawHTML = textClone.innerHTML
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/div>/gi, "\n")
     .replace(/<\/p>/gi, "\n");
-  
+
+  // 4. Extract text using textContent (preserves \n without collapsing lines)
   let tempDiv = document.createElement("div");
-  tempDiv.innerHTML = textContent;
-  let cleanText = tempDiv.innerText || tempDiv.textContent || "";
+  tempDiv.innerHTML = rawHTML;
+  let cleanText = tempDiv.textContent || "";
 
   let lines = cleanText.split("\n").map(l => l.trim()).filter(l => l.length > 0);
   if (lines.length <= 1) return;
 
   const header = lines[0];
 
-  // Safely strips leading whitespace and optional prefixes (e.g. aslfj:, 238324:, :, 1., a))
+  // Safely strips leading whitespace and optional prefixes (e.g. A:, 1., a))
   let choices = lines.slice(1).map((text, idx) => {
     let cleanChoiceText = text.replace(/^\s*([a-zA-Z0-9_-]*[:\.\)])?\s*/, "").trim();
     return {
@@ -50,7 +57,7 @@
     return `<div class="choice-btn" data-index="${item.originalIndex}" onclick="selectChoice(this, ${item.originalIndex})" ondblclick="confirmChoice(this, ${item.originalIndex})"><span class="choice-text">${item.text}</span></div>`;
   });
 
-  const headerSection = `<div class="header-container"><div class="front-header">${header}</div>${imagesHTML ? `<div class="header-image">${imagesHTML}</div>` : ''}</div>`;
+  const headerSection = `<div class="header-container"><div class="front-header">${header}</div>${mediaHTML ? `<div class="header-image">${mediaHTML}</div>` : ''}</div>`;
   container.innerHTML = headerSection + `<div class="choices-wrapper">` + formattedChoices.join("") + `</div>`;
 })();
 

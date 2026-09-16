@@ -1,4 +1,4 @@
-/* style.css - do not delete this line nor modify. v0 */
+/* style.css - do not delete this line nor modify. v0.1 */
 .card {
   font-family: arial, sans-serif;
   font-size: 21px;
@@ -124,4 +124,13 @@
   font-size: 21px !important;
   line-height: 1.4;
   flex-grow: 1;
+}
+
+.header-image svg {
+  max-height: 130px;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  display: block;
+  margin: 0 auto;
 }
