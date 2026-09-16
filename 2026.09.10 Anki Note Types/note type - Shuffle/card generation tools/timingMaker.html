@@ -1,4 +1,4 @@
-<!-- timingMaker.html - do not delete this line nor modify. v9 -->
+<!-- timingMaker.html - do not delete this line nor modify. v10 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -51,6 +51,17 @@
       box-shadow: 0 0 16px rgba(139, 92, 246, 0.8);
     }
 
+    .btn-revert-trim {
+      background-color: #3a4154;
+      color: #ffffff;
+      border: 1px solid #4f5870;
+      transition: all 0.2s ease;
+    }
+
+    .btn-revert-trim:hover {
+      background-color: #4f5870;
+    }
+
     .select-speed {
       background-color: #1a1d24;
       color: #ffffff;
@@ -76,6 +87,7 @@
   <header style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px;">
     <h1>🎬 Anki Timing Generator v6</h1>
     <div style="display: flex; gap: 10px; align-items: center;">
+      <button class="btn btn-revert-trim" id="btn-revert-trim" style="display: none;">🔄 Revert Trim</button>
       <button class="btn btn-download-webm" id="btn-download-webm" disabled>⬇️ Download WebM</button>
       <label class="file-upload-btn">
         📁 Load Media File
@@ -162,7 +174,8 @@
         <div class="hotkey-legend">
           <span><kbd>Space</kbd> Play / Pause</span>
           <span><kbd>A</kbd> Add Marker</span>
-          <span><kbd>Drag House Handle</kbd> Reposition Marker</span>
+          <span><kbd>Drag House Handle</kbd> Reposition</span>
+          <span><kbd>Dbl-Click House</kbd> Delete Marker</span>
           <span><kbd>Drag Side Handles</kbd> Trim Video</span>
           <span><kbd>Click Waveform</kbd> Seek Video</span>
           <span><kbd>Ctrl + Z</kbd> Undo / Revert</span>
@@ -186,6 +199,8 @@ let currentState = {
 
 let words = [];
 let audioBuffer = null;
+let originalAudioBuffer = null;
+let cumulativeTrimOffsetMs = 0;
 let draggedMarkerIdx = null;
 let isScrubbing = false;
 let hoveredMarkerIdx = null;
@@ -221,6 +236,7 @@ const btnPlay = document.getElementById('btn-play');
 const playbackSpeedSelect = document.getElementById('playback-speed');
 const btnCopy = document.getElementById('btn-copy');
 const btnDownloadWebm = document.getElementById('btn-download-webm');
+const btnRevertTrim = document.getElementById('btn-revert-trim');
 const toast = document.getElementById('toast');
 const dropOverlay = document.getElementById('drop-overlay');
 const statWordCount = document.getElementById('stat-word-count');
@@ -251,7 +267,14 @@ function updateTrimButtonState() {
     btnDownloadWebm.disabled = true;
     btnDownloadWebm.classList.remove('blue-active', 'purple-active');
     btnDownloadWebm.textContent = '⬇️ Download WebM';
+    btnRevertTrim.style.display = 'none';
     return;
+  }
+
+  if (cumulativeTrimOffsetMs > 0 || isTrimChanged() || convertedWebmBlobUrl) {
+    btnRevertTrim.style.display = 'inline-block';
+  } else {
+    btnRevertTrim.style.display = 'none';
   }
 
   if (isTrimChanged()) {
@@ -350,12 +373,14 @@ function resetDownloadButton() {
   updateTrimButtonState();
 }
 
-// --- FFmpeg In-Browser Conversion & Trim Function (Optimized Speed) ---
+// --- FFmpeg In-Browser Conversion & Trim Function ---
 async function processMediaWithFFmpeg() {
   if (!originalMediaFile) return;
 
   const file = originalMediaFile;
   const extension = file.name.split('.').pop().toLowerCase();
+  const currentTrimStart = trimStartSec;
+  const currentTrimEnd = trimEndSec;
 
   btnDownloadWebm.disabled = true;
   btnDownloadWebm.textContent = '⏳ Loading FFmpeg...';
@@ -388,7 +413,7 @@ async function processMediaWithFFmpeg() {
 
     const ffmpegArgs = [];
     
-    // Fast Input Seeking: Put -ss and -to BEFORE -i to skip leading frames decoding
+    // Fast Input Seeking
     if (trimStartSec > 0 || (video.duration && trimEndSec < video.duration)) {
       ffmpegArgs.push('-ss', trimStartSec.toFixed(3));
       ffmpegArgs.push('-to', trimEndSec.toFixed(3));
@@ -398,8 +423,8 @@ async function processMediaWithFFmpeg() {
       '-i', inputName,
       '-vf', 'scale=-2:min(720\\,ih)',
       '-c:v', 'libvpx-vp9',
-      '-deadline', 'realtime', // Speed Optimization for VP9 WASM
-      '-cpu-used', '8',        // Maximum WASM Speed Presets
+      '-deadline', 'realtime',
+      '-cpu-used', '8',
       '-crf', '32',
       '-b:v', '0',
       '-pix_fmt', 'yuv420p',
@@ -425,9 +450,34 @@ async function processMediaWithFFmpeg() {
     ffmpeg.FS('unlink', inputName);
     ffmpeg.FS('unlink', outputName);
 
-    // Update applied trim timestamps
-    lastAppliedTrimStart = trimStartSec;
-    lastAppliedTrimEnd = trimEndSec;
+    // Shift existing markers to match new video timeline
+    const trimShiftMs = Math.round(currentTrimStart * 1000);
+    const newDurationMs = Math.round((currentTrimEnd - currentTrimStart) * 1000);
+
+    cumulativeTrimOffsetMs += trimShiftMs;
+
+    const shiftedMarkers = currentState.markers
+      .map(m => m - trimShiftMs)
+      .filter(m => m >= 0 && m <= newDurationMs);
+
+    pushState({
+      sentence: currentState.sentence,
+      markers: shiftedMarkers
+    });
+
+    // Re-decode audio waveform for the trimmed clip
+    try {
+      const blobBuffer = await blob.arrayBuffer();
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioBuffer = await audioCtx.decodeAudioData(blobBuffer);
+    } catch (err) {
+      console.warn('Trimmed audio waveform decode failed:', err);
+    }
+
+    lastAppliedTrimStart = 0;
+    lastAppliedTrimEnd = 0;
+    trimStartSec = 0;
+    trimEndSec = 0;
 
     updateTrimButtonState();
     video.src = convertedWebmBlobUrl;
@@ -464,11 +514,43 @@ btnDownloadWebm.addEventListener('click', () => {
   }
 });
 
+// --- Revert Trim Click Listener ---
+btnRevertTrim.addEventListener('click', () => {
+  if (!originalMediaFile) return;
+
+  if (convertedWebmBlobUrl) {
+    URL.revokeObjectURL(convertedWebmBlobUrl);
+    convertedWebmBlobUrl = null;
+  }
+
+  video.src = URL.createObjectURL(originalMediaFile);
+  audioBuffer = originalAudioBuffer;
+
+  // Restore shifted markers back to original positions
+  if (cumulativeTrimOffsetMs > 0) {
+    const restoredMarkers = currentState.markers.map(m => m + cumulativeTrimOffsetMs);
+    pushState({
+      sentence: currentState.sentence,
+      markers: restoredMarkers
+    });
+    cumulativeTrimOffsetMs = 0;
+  }
+
+  trimStartSec = 0;
+  trimEndSec = video.duration || 0;
+  lastAppliedTrimStart = 0;
+  lastAppliedTrimEnd = video.duration || 0;
+
+  resetDownloadButton();
+  drawTimeline();
+});
+
 // --- Core Media Loader Function ---
 async function loadMediaFile(file) {
   if (!file) return;
 
   originalMediaFile = file;
+  cumulativeTrimOffsetMs = 0;
   fileNameDisplay.textContent = file.name;
   video.src = URL.createObjectURL(file);
 
@@ -488,10 +570,12 @@ async function loadMediaFile(file) {
     const arrayBuffer = await file.arrayBuffer();
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    originalAudioBuffer = audioBuffer;
     drawTimeline();
   } catch (err) {
     console.warn('Audio waveform decode bypassed:', err);
     audioBuffer = null;
+    originalAudioBuffer = null;
     drawTimeline();
   }
 }
@@ -578,7 +662,7 @@ function drawTrimHandles(duration, w, h, scale) {
   if (endX < w) ctx.fillRect(endX, 0, w - endX, h);
 
   const trimActive = isTrimChanged();
-  const handleColor = trimActive ? '#0066ff' : '#6c757d'; // Blue if changed, Gray if unchanged
+  const handleColor = trimActive ? '#0066ff' : '#6c757d';
   const handleWidth = 8 * scale;
 
   // Left Trim Handle (Start)
@@ -760,6 +844,17 @@ timelineWrapper.addEventListener('mousedown', (e) => {
   }
 });
 
+// Double click marker to delete
+timelineWrapper.addEventListener('dblclick', (e) => {
+  const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
+  if (hitIdx !== null) {
+    stopAllDragging();
+    const nextState = JSON.parse(JSON.stringify(currentState));
+    nextState.markers.splice(hitIdx, 1);
+    pushState(nextState);
+  }
+});
+
 function stopAllDragging() {
   if (draggedMarkerIdx !== null) {
     pushState(currentState);
@@ -773,7 +868,6 @@ function stopAllDragging() {
 }
 
 window.addEventListener('mousemove', (e) => {
-  // Fix sticky drag bug: release immediately if primary mouse button is released
   if (e.buttons === 0 && (isScrubbing || draggedMarkerIdx !== null || draggedTrimHandle !== null)) {
     stopAllDragging();
     return;
