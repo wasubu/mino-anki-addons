@@ -1,4 +1,4 @@
-<!-- timingMaker.html - do not delete this line nor modify. v8 -->
+<!-- timingMaker.html - do not delete this line nor modify. v9 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -50,6 +50,16 @@
       background-color: #7c3aed !important;
       box-shadow: 0 0 16px rgba(139, 92, 246, 0.8);
     }
+
+    .select-speed {
+      background-color: #1a1d24;
+      color: #ffffff;
+      border: 1px solid #2f3542;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -83,9 +93,19 @@
           <video id="video-preview" playsinline></video>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
           <button class="btn" id="btn-play">▶ Play / Pause</button>
-          <span id="file-name" style="font-size: 0.85rem; color: var(--text-muted);">No file loaded</span>
+          
+          <select id="playback-speed" class="select-speed" title="Playback Speed">
+            <option value="0.5">0.5x</option>
+            <option value="0.75">0.75x</option>
+            <option value="1" selected>1.0x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2.0x</option>
+          </select>
+
+          <span id="file-name" style="font-size: 0.85rem; color: var(--text-muted); flex-grow: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">No file loaded</span>
         </div>
       </div>
     </div>
@@ -198,6 +218,7 @@ const timelineWrapper = document.getElementById('timeline-wrapper');
 const wordsContainer = document.getElementById('words-container');
 const outputTimings = document.getElementById('output-timings');
 const btnPlay = document.getElementById('btn-play');
+const playbackSpeedSelect = document.getElementById('playback-speed');
 const btnCopy = document.getElementById('btn-copy');
 const btnDownloadWebm = document.getElementById('btn-download-webm');
 const toast = document.getElementById('toast');
@@ -205,6 +226,15 @@ const dropOverlay = document.getElementById('drop-overlay');
 const statWordCount = document.getElementById('stat-word-count');
 const statDummyCount = document.getElementById('stat-dummy-count');
 const statPutLastWord = document.getElementById('stat-put-last-word');
+
+// --- Playback Speed Control ---
+playbackSpeedSelect.addEventListener('change', () => {
+  video.playbackRate = parseFloat(playbackSpeedSelect.value);
+});
+
+video.addEventListener('loadeddata', () => {
+  video.playbackRate = parseFloat(playbackSpeedSelect.value);
+});
 
 // --- Check if Trim State is Modified ---
 function isTrimChanged() {
@@ -320,7 +350,7 @@ function resetDownloadButton() {
   updateTrimButtonState();
 }
 
-// --- FFmpeg In-Browser Conversion & Trim Function ---
+// --- FFmpeg In-Browser Conversion & Trim Function (Optimized Speed) ---
 async function processMediaWithFFmpeg() {
   if (!originalMediaFile) return;
 
@@ -358,7 +388,7 @@ async function processMediaWithFFmpeg() {
 
     const ffmpegArgs = [];
     
-    // Add trimming parameters if trim is changed
+    // Fast Input Seeking: Put -ss and -to BEFORE -i to skip leading frames decoding
     if (trimStartSec > 0 || (video.duration && trimEndSec < video.duration)) {
       ffmpegArgs.push('-ss', trimStartSec.toFixed(3));
       ffmpegArgs.push('-to', trimEndSec.toFixed(3));
@@ -368,6 +398,8 @@ async function processMediaWithFFmpeg() {
       '-i', inputName,
       '-vf', 'scale=-2:min(720\\,ih)',
       '-c:v', 'libvpx-vp9',
+      '-deadline', 'realtime', // Speed Optimization for VP9 WASM
+      '-cpu-used', '8',        // Maximum WASM Speed Presets
       '-crf', '32',
       '-b:v', '0',
       '-pix_fmt', 'yuv420p',
@@ -728,7 +760,25 @@ timelineWrapper.addEventListener('mousedown', (e) => {
   }
 });
 
+function stopAllDragging() {
+  if (draggedMarkerIdx !== null) {
+    pushState(currentState);
+    draggedMarkerIdx = null;
+  }
+  if (draggedTrimHandle !== null) {
+    draggedTrimHandle = null;
+    updateTrimButtonState();
+  }
+  isScrubbing = false;
+}
+
 window.addEventListener('mousemove', (e) => {
+  // Fix sticky drag bug: release immediately if primary mouse button is released
+  if (e.buttons === 0 && (isScrubbing || draggedMarkerIdx !== null || draggedTrimHandle !== null)) {
+    stopAllDragging();
+    return;
+  }
+
   const rect = timelineWrapper.getBoundingClientRect();
 
   const trimHandle = getTrimHandleAtPos(e.clientX);
@@ -775,16 +825,12 @@ window.addEventListener('mousemove', (e) => {
   }
 });
 
-window.addEventListener('mouseup', () => {
-  if (draggedTrimHandle !== null) {
-    draggedTrimHandle = null;
-    updateTrimButtonState();
+window.addEventListener('mouseup', stopAllDragging);
+window.addEventListener('blur', stopAllDragging);
+window.addEventListener('mouseleave', (e) => {
+  if (e.target === document.documentElement) {
+    stopAllDragging();
   }
-  if (draggedMarkerIdx !== null) {
-    pushState(currentState);
-    draggedMarkerIdx = null;
-  }
-  isScrubbing = false;
 });
 
 function seekToMouse(e) {
