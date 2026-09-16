@@ -1,0 +1,58 @@
+<!-- back.html - do not delete this line nor modify. v0 -->
+<div class="front-text" id="back-container">
+  {{Front}}
+</div>
+
+<!-- Hidden Answer Reference -->
+<div id="correct-answer-index" style="display: none;">{{Back}}</div>
+
+<script>
+(function initBackAndGrade() {
+  const targetElement = document.getElementById("correct-answer-index");
+  const rawText = targetElement ? targetElement.innerText.trim() : "";
+  const match = rawText.match(/\d+/);
+  const correctIndex = match ? parseInt(match[0], 10) : null;
+
+  const savedSelected = sessionStorage.getItem("anki_selected");
+  const selectedIndex = savedSelected !== null ? parseInt(savedSelected, 10) : null;
+
+  const savedChoicesStr = sessionStorage.getItem("anki_choices");
+  const container = document.getElementById("back-container");
+
+  if (savedChoicesStr && container) {
+    const choices = JSON.parse(savedChoicesStr);
+    const header = sessionStorage.getItem("anki_header") || "";
+
+    const formattedChoices = choices.map(item => {
+      let statusClass = "";
+      if (item.originalIndex === correctIndex) {
+        statusClass = "correct";
+      } else if (item.originalIndex === selectedIndex) {
+        statusClass = "wrong";
+      }
+
+      // Output matches Front Template structure to prevent layout shifts
+      return `<div class="choice-btn ${statusClass}"><span class="choice-text">${item.text}</span></div>`;
+    });
+
+    const images = Array.from(container.querySelectorAll("img"));
+    const imagesHTML = images.map(img => img.outerHTML).join("");
+    const headerSection = `<div class="header-container"><div class="front-header">${header}</div>${imagesHTML ? `<div class="header-image">${imagesHTML}</div>` : ''}</div>`;
+
+    container.innerHTML = headerSection + `<div class="choices-wrapper">` + formattedChoices.join("") + `</div>`;
+  }
+
+  // Auto-grade timing (100ms if correct, 3000ms if wrong)
+  const isCorrect = (selectedIndex === correctIndex);
+  const ease = isCorrect ? 3 : 1;
+  const autoGradeDelay = isCorrect ? 50 : 3000;
+
+  setTimeout(() => {
+    if (typeof pycmd !== "undefined") {
+      pycmd("ease" + ease);
+    } else if (typeof AnkiDroidJS !== "undefined") {
+      AnkiDroidJS.answerCard(ease);
+    }
+  }, autoGradeDelay);
+})();
+</script>

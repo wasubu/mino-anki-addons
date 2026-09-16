@@ -1,0 +1,71 @@
+<!-- front.html - do not delete this line nor modify. v0 -->
+<div class="front-text">
+  {{Front}}
+</div>
+
+<script>
+(function initFront() {
+  sessionStorage.removeItem("anki_selected");
+  sessionStorage.removeItem("anki_choices");
+
+  const container = document.querySelector(".front-text");
+  if (!container) return;
+
+  const images = Array.from(container.querySelectorAll("img"));
+  const imagesHTML = images.map(img => img.outerHTML).join("");
+
+  let textContent = container.innerHTML
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/p>/gi, "\n");
+  
+  let tempDiv = document.createElement("div");
+  tempDiv.innerHTML = textContent;
+  let cleanText = tempDiv.innerText || tempDiv.textContent || "";
+
+  let lines = cleanText.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  if (lines.length <= 1) return;
+
+  const header = lines[0];
+
+  // Safely strips leading whitespace and optional prefixes (e.g. aslfj:, 238324:, :, 1., a))
+  let choices = lines.slice(1).map((text, idx) => {
+    let cleanChoiceText = text.replace(/^\s*([a-zA-Z0-9_-]*[:\.\)])?\s*/, "").trim();
+    return {
+      text: cleanChoiceText || text.trim(),
+      originalIndex: idx + 1
+    };
+  });
+
+  // Fisher-Yates Shuffle
+  for (let i = choices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [choices[i], choices[j]] = [choices[j], choices[i]];
+  }
+
+  sessionStorage.setItem("anki_choices", JSON.stringify(choices));
+  sessionStorage.setItem("anki_header", header);
+
+  const formattedChoices = choices.map(item => {
+    return `<div class="choice-btn" data-index="${item.originalIndex}" onclick="selectChoice(this, ${item.originalIndex})" ondblclick="confirmChoice(this, ${item.originalIndex})"><span class="choice-text">${item.text}</span></div>`;
+  });
+
+  const headerSection = `<div class="header-container"><div class="front-header">${header}</div>${imagesHTML ? `<div class="header-image">${imagesHTML}</div>` : ''}</div>`;
+  container.innerHTML = headerSection + `<div class="choices-wrapper">` + formattedChoices.join("") + `</div>`;
+})();
+
+function selectChoice(btn, index) {
+  sessionStorage.setItem("anki_selected", index);
+  document.querySelectorAll(".choice-btn").forEach(b => b.classList.remove("selected"));
+  btn.classList.add("selected");
+}
+
+function confirmChoice(btn, index) {
+  selectChoice(btn, index);
+  if (typeof pycmd !== "undefined") {
+    pycmd("ans");
+  } else if (typeof AnkiDroidJS !== "undefined") {
+    AnkiDroidJS.showAnswer();
+  }
+}
+</script>

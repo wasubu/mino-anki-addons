@@ -1,0 +1,127 @@
+/* style.css - do not delete this line nor modify. v0 */
+.card {
+  font-family: arial, sans-serif;
+  font-size: 21px;
+  text-align: center;
+  color: #1a1a1a;
+  background-color: #ffffff;
+}
+
+/* Container layout - locked dimensions for Front & Back */
+.front-text {
+  text-align: left;
+  display: inline-block;
+  width: 100%;
+  max-width: 600px;
+  font-size: 21px;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+/* Header & image box */
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  background: transparent;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-sizing: border-box;
+}
+
+.front-header {
+  font-size: 32px !important;
+  font-weight: bold;
+  line-height: 1.2;
+  text-align: left;
+  flex: 1;
+}
+
+.header-image {
+  flex-shrink: 0;
+  margin-left: 15px;
+}
+
+.header-image img {
+  max-height: 120px;
+  width: auto;
+  margin: 0;
+  display: block;
+  border-radius: 6px;
+}
+
+.choices-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Choice Buttons - Strictly identical sizing on Front & Back */
+.choice-btn {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  padding: 14px 18px;
+  margin: 0;
+  background-color: #ffffff;
+  color: #1a1a1a;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 21px !important;
+  font-family: arial, sans-serif;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.choice-btn:hover {
+  background-color: #f5f5f5;
+  border-color: #cccccc;
+}
+
+.choice-btn.selected {
+  border-color: #2196f3;
+  background-color: #e3f2fd;
+  text-shadow: 0 0 0.6px #1a1a1a;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.choice-btn.correct {
+  background-color: #4caf50 !important;
+  color: #ffffff !important;
+  border-color: #388e3c !important;
+  text-shadow: 0 0 0.6px #ffffff;
+}
+
+.choice-btn.wrong {
+  background-color: #f44336 !important;
+  color: #ffffff !important;
+  border-color: #d32f2f !important;
+  text-shadow: 0 0 0.6px #ffffff;
+}
+
+.choice-prefix {
+  font-size: 21px !important;
+  font-weight: bold;
+  line-height: 1.4;
+  min-width: 48px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.choice-text {
+  font-size: 21px !important;
+  line-height: 1.4;
+  flex-grow: 1;
+}
