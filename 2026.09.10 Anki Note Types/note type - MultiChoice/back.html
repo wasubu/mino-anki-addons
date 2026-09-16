@@ -1,4 +1,4 @@
-<!-- back.html - do not delete this line nor modify. v0 -->
+<!-- back.html - do not delete this line nor modify. v0.2 -->
 <div class="front-text" id="back-container">
   {{Front}}
 </div>
@@ -22,7 +22,13 @@
   if (savedChoicesStr && container) {
     const choices = JSON.parse(savedChoicesStr);
     const header = sessionStorage.getItem("anki_header") || "";
+    const isNoTitle = !header.trim();
 
+    // 1. Capture intact <img> and <svg> elements from the DOM
+    const mediaElements = Array.from(container.querySelectorAll("img, svg"));
+    const mediaHTML = mediaElements.map(el => el.outerHTML).join("");
+
+    // 2. Format choices with correctness styling
     const formattedChoices = choices.map(item => {
       let statusClass = "";
       if (item.originalIndex === correctIndex) {
@@ -31,18 +37,21 @@
         statusClass = "wrong";
       }
 
-      // Output matches Front Template structure to prevent layout shifts
       return `<div class="choice-btn ${statusClass}"><span class="choice-text">${item.text}</span></div>`;
     });
 
-    const images = Array.from(container.querySelectorAll("img"));
-    const imagesHTML = images.map(img => img.outerHTML).join("");
-    const headerSection = `<div class="header-container"><div class="front-header">${header}</div>${imagesHTML ? `<div class="header-image">${imagesHTML}</div>` : ''}</div>`;
+    // 3. Rebuild header & choices container matching Front template structure
+    const headerSection = `
+      <div class="header-container ${isNoTitle ? 'no-title' : ''}">
+        ${header ? `<div class="front-header">${header}</div>` : ''}
+        ${mediaHTML ? `<div class="header-image">${mediaHTML}</div>` : ''}
+      </div>`;
 
-    container.innerHTML = headerSection + `<div class="choices-wrapper">` + formattedChoices.join("") + `</div>`;
+    const wrapperClass = isNoTitle ? 'choices-wrapper two-column' : 'choices-wrapper';
+    container.innerHTML = headerSection + `<div class="${wrapperClass}">` + formattedChoices.join("") + `</div>`;
   }
 
-  // Auto-grade timing (100ms if correct, 3000ms if wrong)
+  // Auto-grade timing (50ms if correct, 3000ms if wrong)
   const isCorrect = (selectedIndex === correctIndex);
   const ease = isCorrect ? 3 : 1;
   const autoGradeDelay = isCorrect ? 50 : 3000;

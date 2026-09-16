@@ -1,4 +1,4 @@
-/* style.css - do not delete this line nor modify. v0.1 */
+/* style.css - do not delete this line nor modify. v0.2 */
 .card {
   font-family: arial, sans-serif;
   font-size: 21px;
@@ -126,11 +126,50 @@
   flex-grow: 1;
 }
 
+/* Standard SVG & Image styling in header */
+.header-image img,
 .header-image svg {
-  max-height: 130px;
+  max-height: 140px;
   max-width: 100%;
-  width: auto;
   height: auto;
+  width: auto;
   display: block;
   margin: 0 auto;
+}
+
+/* --- NO TITLE STYLES --- */
+
+/* Center and expand image/SVG box when no heading text is present */
+.header-container.no-title {
+  justify-content: center;
+  padding: 16px;
+}
+
+.header-container.no-title .header-image {
+  margin-left: 0;
+  width: 100%;
+  max-width: 100%;
+  text-align: center;
+}
+
+.header-container.no-title .header-image img,
+.header-container.no-title .header-image svg {
+  max-height: 280px;
+  max-width: 100%;
+  height: auto;
+  width: auto;
+  margin: 0 auto;
+  display: block;
+}
+
+/* 2-Column layout for choices when there is no title */
+.choices-wrapper.two-column {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Span last choice across both columns if total choice count is odd */
+.choices-wrapper.two-column .choice-btn:last-child:nth-child(odd) {
+  grid-column: span 2;
 }
