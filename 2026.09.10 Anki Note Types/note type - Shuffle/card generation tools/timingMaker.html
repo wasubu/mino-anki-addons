@@ -1,4 +1,4 @@
-<!-- timingMaker.html - do not delete this line nor modify. v7 -->
+<!-- timingMaker.html - do not delete this line nor modify. v8 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,6 +34,21 @@
     .btn-download-webm.blue-active:hover {
       background-color: #0052cc !important;
       box-shadow: 0 0 16px rgba(0, 102, 255, 0.8);
+    }
+
+    /* Style for Apply Trim Purple Active State */
+    .btn-download-webm.purple-active {
+      background-color: #8b5cf6 !important;
+      color: #ffffff !important;
+      border-color: #7c3aed !important;
+      opacity: 1 !important;
+      cursor: pointer !important;
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+    }
+
+    .btn-download-webm.purple-active:hover {
+      background-color: #7c3aed !important;
+      box-shadow: 0 0 16px rgba(139, 92, 246, 0.8);
     }
   </style>
 </head>
@@ -128,6 +143,7 @@
           <span><kbd>Space</kbd> Play / Pause</span>
           <span><kbd>A</kbd> Add Marker</span>
           <span><kbd>Drag House Handle</kbd> Reposition Marker</span>
+          <span><kbd>Drag Side Handles</kbd> Trim Video</span>
           <span><kbd>Click Waveform</kbd> Seek Video</span>
           <span><kbd>Ctrl + Z</kbd> Undo / Revert</span>
         </div>
@@ -156,6 +172,15 @@ let hoveredMarkerIdx = null;
 let hoveredWordIdx = null;
 let dragCounter = 0;
 
+// --- Video Trimming & Original Master Copy State ---
+let originalMediaFile = null;
+let trimStartSec = 0;
+let trimEndSec = 0;
+let lastAppliedTrimStart = 0;
+let lastAppliedTrimEnd = 0;
+let draggedTrimHandle = null; // 'start' | 'end' | null
+let hoveredTrimHandle = null; // 'start' | 'end' | null
+
 // FFmpeg Conversion State & Logger
 let ffmpeg = null;
 let ffmpegLogs = [];
@@ -180,6 +205,37 @@ const dropOverlay = document.getElementById('drop-overlay');
 const statWordCount = document.getElementById('stat-word-count');
 const statDummyCount = document.getElementById('stat-dummy-count');
 const statPutLastWord = document.getElementById('stat-put-last-word');
+
+// --- Check if Trim State is Modified ---
+function isTrimChanged() {
+  if (!video.duration) return false;
+  return (
+    Math.abs(trimStartSec - lastAppliedTrimStart) > 0.05 ||
+    Math.abs(trimEndSec - lastAppliedTrimEnd) > 0.05
+  );
+}
+
+// --- Dynamic Button State Update ---
+function updateTrimButtonState() {
+  if (!originalMediaFile) {
+    btnDownloadWebm.disabled = true;
+    btnDownloadWebm.classList.remove('blue-active', 'purple-active');
+    btnDownloadWebm.textContent = '⬇️ Download WebM';
+    return;
+  }
+
+  if (isTrimChanged()) {
+    btnDownloadWebm.disabled = false;
+    btnDownloadWebm.classList.remove('blue-active');
+    btnDownloadWebm.classList.add('purple-active');
+    btnDownloadWebm.textContent = '✂️ Apply Trim';
+  } else if (convertedWebmBlobUrl || originalMediaFile.name.toLowerCase().endsWith('.webm')) {
+    btnDownloadWebm.disabled = false;
+    btnDownloadWebm.classList.remove('purple-active');
+    btnDownloadWebm.classList.add('blue-active');
+    btnDownloadWebm.textContent = '⬇️ Download WebM';
+  }
+}
 
 // --- State Stack Management ---
 function pushState(newState) {
@@ -261,22 +317,17 @@ function resetDownloadButton() {
   }
   convertedFileName = '';
   ffmpegLogs = [];
-  btnDownloadWebm.disabled = true;
-  btnDownloadWebm.classList.remove('blue-active');
-  btnDownloadWebm.textContent = '⬇️ Download WebM';
+  updateTrimButtonState();
 }
 
-// --- FFmpeg In-Browser Conversion Function ---
-async function convertToWebmIfNeeded(file) {
+// --- FFmpeg In-Browser Conversion & Trim Function ---
+async function processMediaWithFFmpeg() {
+  if (!originalMediaFile) return;
+
+  const file = originalMediaFile;
   const extension = file.name.split('.').pop().toLowerCase();
 
-  if (extension === 'webm') {
-    resetDownloadButton();
-    btnDownloadWebm.textContent = '✅ Already WebM';
-    return;
-  }
-
-  resetDownloadButton();
+  btnDownloadWebm.disabled = true;
   btnDownloadWebm.textContent = '⏳ Loading FFmpeg...';
 
   try {
@@ -297,7 +348,7 @@ async function convertToWebmIfNeeded(file) {
 
     ffmpeg.setProgress(({ ratio }) => {
       const pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
-      btnDownloadWebm.textContent = `⏳ Converting (${pct}%)...`;
+      btnDownloadWebm.textContent = isTrimChanged() ? `⏳ Trimming (${pct}%)...` : `⏳ Converting (${pct}%)...`;
     });
 
     const inputName = `input_${Date.now()}.${extension}`;
@@ -305,8 +356,15 @@ async function convertToWebmIfNeeded(file) {
 
     ffmpeg.FS('writeFile', inputName, await fetchFile(file));
 
-    // Sanitized FFmpeg WASM parameters (removed internal single-quotes and multi-threading flags)
-    await ffmpeg.run(
+    const ffmpegArgs = [];
+    
+    // Add trimming parameters if trim is changed
+    if (trimStartSec > 0 || (video.duration && trimEndSec < video.duration)) {
+      ffmpegArgs.push('-ss', trimStartSec.toFixed(3));
+      ffmpegArgs.push('-to', trimEndSec.toFixed(3));
+    }
+
+    ffmpegArgs.push(
       '-i', inputName,
       '-vf', 'scale=-2:min(720\\,ih)',
       '-c:v', 'libvpx-vp9',
@@ -319,8 +377,14 @@ async function convertToWebmIfNeeded(file) {
       '-y', outputName
     );
 
+    await ffmpeg.run(...ffmpegArgs);
+
     const data = ffmpeg.FS('readFile', outputName);
     const blob = new Blob([data.buffer], { type: 'video/webm' });
+
+    if (convertedWebmBlobUrl) {
+      URL.revokeObjectURL(convertedWebmBlobUrl);
+    }
     convertedWebmBlobUrl = URL.createObjectURL(blob);
 
     const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
@@ -329,27 +393,32 @@ async function convertToWebmIfNeeded(file) {
     ffmpeg.FS('unlink', inputName);
     ffmpeg.FS('unlink', outputName);
 
-    btnDownloadWebm.disabled = false;
-    btnDownloadWebm.classList.add('blue-active');
-    btnDownloadWebm.textContent = '⬇️ Download WebM';
+    // Update applied trim timestamps
+    lastAppliedTrimStart = trimStartSec;
+    lastAppliedTrimEnd = trimEndSec;
 
+    updateTrimButtonState();
     video.src = convertedWebmBlobUrl;
 
   } catch (err) {
-    console.error('FFmpeg web conversion failed:', err);
+    console.error('FFmpeg web processing failed:', err);
     ffmpegLogs.push(`JS Exception: ${err.message || err}`);
     btnDownloadWebm.disabled = false;
+    btnDownloadWebm.classList.remove('purple-active');
     btnDownloadWebm.classList.add('blue-active');
-    btnDownloadWebm.textContent = '❌ Conversion Failed (Click for Logs)';
+    btnDownloadWebm.textContent = '❌ Processing Failed (Click for Logs)';
   }
 }
 
-// --- Download / Log Copy Click Listener ---
+// --- Download / Trim Button Click Listener ---
 btnDownloadWebm.addEventListener('click', () => {
-  if (convertedWebmBlobUrl) {
+  if (isTrimChanged()) {
+    processMediaWithFFmpeg();
+  } else if (convertedWebmBlobUrl || (originalMediaFile && originalMediaFile.name.toLowerCase().endsWith('.webm'))) {
+    const downloadUrl = convertedWebmBlobUrl || video.src;
     const a = document.createElement('a');
-    a.href = convertedWebmBlobUrl;
-    a.download = convertedFileName;
+    a.href = downloadUrl;
+    a.download = convertedFileName || originalMediaFile.name;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -367,10 +436,21 @@ btnDownloadWebm.addEventListener('click', () => {
 async function loadMediaFile(file) {
   if (!file) return;
 
+  originalMediaFile = file;
   fileNameDisplay.textContent = file.name;
   video.src = URL.createObjectURL(file);
 
-  convertToWebmIfNeeded(file);
+  trimStartSec = 0;
+  trimEndSec = 0;
+  lastAppliedTrimStart = 0;
+  lastAppliedTrimEnd = 0;
+
+  resetDownloadButton();
+
+  const extension = file.name.split('.').pop().toLowerCase();
+  if (extension !== 'webm') {
+    processMediaWithFFmpeg();
+  }
 
   try {
     const arrayBuffer = await file.arrayBuffer();
@@ -383,6 +463,15 @@ async function loadMediaFile(file) {
     drawTimeline();
   }
 }
+
+video.addEventListener('loadedmetadata', () => {
+  if (trimEndSec === 0 || trimEndSec > video.duration) {
+    trimEndSec = video.duration;
+    lastAppliedTrimEnd = video.duration;
+  }
+  drawTimeline();
+  updateTrimButtonState();
+});
 
 mediaFileInput.addEventListener('change', (e) => {
   if (e.target.files && e.target.files[0]) {
@@ -427,7 +516,7 @@ window.addEventListener('drop', (e) => {
   }
 });
 
-// --- Draw Markers & Timeline ---
+// --- Draw Markers, Waveform & Trim Handles ---
 function drawUpsideDownHouse(x, y, width, height, roofHeight, color, isHovered) {
   const hw = width / 2;
   ctx.beginPath();
@@ -443,6 +532,38 @@ function drawUpsideDownHouse(x, y, width, height, roofHeight, color, isHovered) 
   ctx.strokeStyle = isHovered ? '#ffffff' : '#000000';
   ctx.lineWidth = 1.5 * window.devicePixelRatio;
   ctx.stroke();
+}
+
+function drawTrimHandles(duration, w, h, scale) {
+  if (!duration) return;
+
+  const startX = (trimStartSec / duration) * w;
+  const endX = (trimEndSec / duration) * w;
+
+  // Darken trimmed-out side regions
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  if (startX > 0) ctx.fillRect(0, 0, startX, h);
+  if (endX < w) ctx.fillRect(endX, 0, w - endX, h);
+
+  const trimActive = isTrimChanged();
+  const handleColor = trimActive ? '#0066ff' : '#6c757d'; // Blue if changed, Gray if unchanged
+  const handleWidth = 8 * scale;
+
+  // Left Trim Handle (Start)
+  ctx.fillStyle = (hoveredTrimHandle === 'start' || draggedTrimHandle === 'start') ? '#38ef7d' : handleColor;
+  ctx.fillRect(startX, 0, handleWidth, h);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(startX + (2 * scale), (h / 2) - (10 * scale), 2 * scale, 20 * scale);
+  ctx.fillRect(startX + (5 * scale), (h / 2) - (10 * scale), 2 * scale, 20 * scale);
+
+  // Right Trim Handle (End)
+  ctx.fillStyle = (hoveredTrimHandle === 'end' || draggedTrimHandle === 'end') ? '#38ef7d' : handleColor;
+  ctx.fillRect(endX - handleWidth, 0, handleWidth, h);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(endX - handleWidth + (1 * scale), (h / 2) - (10 * scale), 2 * scale, 20 * scale);
+  ctx.fillRect(endX - handleWidth + (4 * scale), (h / 2) - (10 * scale), 2 * scale, 20 * scale);
 }
 
 function drawTimeline() {
@@ -474,6 +595,10 @@ function drawTimeline() {
     }
   }
 
+  // Draw Trim Handles & Dimmed Out Bounds
+  drawTrimHandles(duration, w, h, scale);
+
+  // Draw Word Markers
   currentState.markers.forEach((ms, idx) => {
     const x = (ms / 1000 / duration) * w;
     const isHovered = (hoveredMarkerIdx === idx || draggedMarkerIdx === idx || hoveredWordIdx === idx);
@@ -496,6 +621,7 @@ function drawTimeline() {
     ctx.fillText(idx + 1, x, 14 * scale);
   });
 
+  // Draw Playhead
   const curTime = video.currentTime || 0;
   const playheadX = (curTime / duration) * w;
 
@@ -551,6 +677,21 @@ function updateActiveWordHighlight() {
   });
 }
 
+function getTrimHandleAtPos(clientX) {
+  if (!video.duration) return null;
+  const rect = timelineWrapper.getBoundingClientRect();
+  const clickX = clientX - rect.left;
+  const duration = video.duration;
+
+  const startX = (trimStartSec / duration) * rect.width;
+  const endX = (trimEndSec / duration) * rect.width;
+
+  if (Math.abs(clickX - startX) <= 12) return 'start';
+  if (Math.abs(clickX - endX) <= 12) return 'end';
+
+  return null;
+}
+
 function getHouseHandleIndexAtPos(clientX, clientY) {
   if (!video.duration) return null;
   const rect = timelineWrapper.getBoundingClientRect();
@@ -570,12 +711,17 @@ function getHouseHandleIndexAtPos(clientX, clientY) {
 }
 
 timelineWrapper.addEventListener('mousedown', (e) => {
+  const trimHandle = getTrimHandleAtPos(e.clientX);
+  if (trimHandle !== null) {
+    draggedTrimHandle = trimHandle;
+    if (!video.paused) video.pause();
+    return;
+  }
+
   const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
   if (hitIdx !== null) {
     draggedMarkerIdx = hitIdx;
-    if (!video.paused) {
-      video.pause();
-    }
+    if (!video.paused) video.pause();
   } else {
     isScrubbing = true;
     seekToMouse(e);
@@ -585,16 +731,35 @@ timelineWrapper.addEventListener('mousedown', (e) => {
 window.addEventListener('mousemove', (e) => {
   const rect = timelineWrapper.getBoundingClientRect();
 
-  const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
-  if (hitIdx !== null || draggedMarkerIdx !== null) {
+  const trimHandle = getTrimHandleAtPos(e.clientX);
+  hoveredTrimHandle = (draggedTrimHandle !== null) ? draggedTrimHandle : trimHandle;
+
+  if (hoveredTrimHandle !== null) {
     timelineWrapper.style.cursor = 'ew-resize';
-    hoveredMarkerIdx = (draggedMarkerIdx !== null) ? draggedMarkerIdx : hitIdx;
   } else {
-    timelineWrapper.style.cursor = 'pointer';
-    hoveredMarkerIdx = null;
+    const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
+    if (hitIdx !== null || draggedMarkerIdx !== null) {
+      timelineWrapper.style.cursor = 'ew-resize';
+      hoveredMarkerIdx = (draggedMarkerIdx !== null) ? draggedMarkerIdx : hitIdx;
+    } else {
+      timelineWrapper.style.cursor = 'pointer';
+      hoveredMarkerIdx = null;
+    }
   }
 
-  if (draggedMarkerIdx !== null && video.duration) {
+  if (draggedTrimHandle !== null && video.duration) {
+    const mouseX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const newTime = (mouseX / rect.width) * video.duration;
+
+    if (draggedTrimHandle === 'start') {
+      trimStartSec = Math.max(0, Math.min(newTime, trimEndSec - 0.1));
+    } else if (draggedTrimHandle === 'end') {
+      trimEndSec = Math.max(trimStartSec + 0.1, Math.min(newTime, video.duration));
+    }
+
+    updateTrimButtonState();
+    drawTimeline();
+  } else if (draggedMarkerIdx !== null && video.duration) {
     const mouseX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     const newTimeMs = Math.round((mouseX / rect.width) * video.duration * 1000);
 
@@ -611,6 +776,10 @@ window.addEventListener('mousemove', (e) => {
 });
 
 window.addEventListener('mouseup', () => {
+  if (draggedTrimHandle !== null) {
+    draggedTrimHandle = null;
+    updateTrimButtonState();
+  }
   if (draggedMarkerIdx !== null) {
     pushState(currentState);
     draggedMarkerIdx = null;
