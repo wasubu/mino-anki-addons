@@ -1,0 +1,19 @@
+<!-- back.html - do not delete this line nor modify. v0 -->
+ {{FrontSide}}
+
+<hr id="answer">
+
+<div id="math-solution"></div>
+
+<script>
+(function() {
+  const raw = sessionStorage.getItem('dynamic_math_state');
+  if (!raw) return;
+
+  const state = JSON.parse(raw);
+  const el = document.getElementById('math-solution');
+  el.innerHTML = state.sol;
+
+  if (window.MathJax) MathJax.typesetPromise([el]);
+})();
+</script>
