@@ -1,4 +1,5 @@
-<!-- front.html - do not delete this line nor modify. v0.3 -->
+<!-- front.html - do not delete this line nor modify. v0.4 -->
+<div style='font-family: "Arial"; font-size: 17px;'>{{ProblemID}}</div>
 <div class="card-container">
   <div id="math-question">Generating problem...</div>
 </div>
@@ -50,6 +51,54 @@
         state = {
           q: `\\[\\begin{aligned} g(m) &= \\frac{m}{${a}} \\\\[4pt] h(m) &= m^2 - ${b} \\\\[4pt] (g \\circ h)(${c}) &= \\text{?} \\end{aligned}\\]`,
           sol: `\\[\\begin{aligned} (g \\circ h)(${c}) &= g(${h_c}) = \\mathbf{${ans}} \\end{aligned}\\]`
+        };
+        break;
+      }
+
+      case "composition2": {
+        let a, b, c, h_c, ans;
+        attempts = 0;
+        do {
+            checkLimit();
+            a = randInt(-2, 20);
+            b = randInt(1, 5);
+            c = randInt(-5, 6); // Fixed inverted order (-5 to 6)
+            h_c = c + (b * b);  // Updated to match h(m) = m + b^2
+            ans = h_c / a;
+        } while (h_c <= 0 || h_c % a !== 0);
+
+        state = {
+            q: `\\[\\begin{aligned}
+            h(m) &= m + ${b}^2 \\\\[4pt]
+            g(m) &= \\frac{m}{${a}} \\\\[4pt]
+            (g \\circ h)(${c}) &= \\text{?}
+            \\end{aligned}\\]`,
+            sol: `\\[\\begin{aligned} (g \\circ h)(${c}) &= g(${h_c}) = \\mathbf{${ans}} \\end{aligned}\\]`
+        };
+        break;
+      }
+
+      case "composition3": {
+        let a, b, c, n_c, ans;
+        ttempts = 0;
+        do {
+            checkLimit();
+            a = randInt(-2, 5);
+            b = randInt(13, 20);
+            c = randInt(-4, 4);
+            n_c = (a * c) - b;  // Inner function: n(c) = a*c - b
+            ans = n_c * n_c;    // Outer function: r(n_c) = (n_c)^2
+        } while (a === 0 || n_c === 0); // Re-roll trivial cases (a=0 or result=0)
+
+        state = {
+            q: `\\[\\begin{aligned}
+            n(m) &= ${a}m - ${b} \\\\[4pt]
+            r(m) &= m^2 \\\\[4pt]
+            (r \\circ n)(${c}) &= \\text{?}
+            \\end{aligned}\\]`,
+            sol: `\\[\\begin{aligned}
+            \\; (r \\circ n)(${c}) &= r(${n_c}) = \\mathbf{${ans}}
+            \\end{aligned}\\]`
         };
         break;
       }
