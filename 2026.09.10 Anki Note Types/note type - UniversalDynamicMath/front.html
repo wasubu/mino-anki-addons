@@ -1,36 +1,208 @@
-<!-- front.html - do not delete this line nor modify. v0.4 -->
-<div style='font-family: "Arial"; font-size: 17px;'>{{ProblemID}}</div>
+<!-- front.html - do not delete this line nor modify. v0.5 -->
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;600&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg-app: #f8fafc;
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --card-border: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-muted: #64748b;
+    --badge-bg: #f1f5f9;
+    --badge-text: #475569;
+    --badge-border: #cbd5e1;
+    --math-box-bg: #f8fafc;
+    --math-box-border: #f1f5f9;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+    --error-bg: #fef2f2;
+    --error-text: #991b1b;
+    --error-border: #fecaca;
+  }
+
+  /* Anki Native Dark Mode & AnkiMobile Night Mode */
+  .nightMode, body.night_mode, [data-theme="dark"] {
+    --bg-app: #090d16;
+    --card-bg: rgba(15, 23, 42, 0.92);
+    --card-border: #1e293b;
+    --text-primary: #f8fafc;
+    --text-muted: #94a3b8;
+    --badge-bg: #0f172a;
+    --badge-text: #cbd5e1;
+    --badge-border: #334155;
+    --math-box-bg: #0b1120;
+    --math-box-border: #1e293b;
+    --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    --error-bg: #450a0a;
+    --error-text: #fca5a5;
+    --error-border: #7f1d1d;
+  }
+
+  .card-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 520px;
+    margin: 24px auto;
+    padding: 0 0px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .math-card {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 10px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+  }
+
+  /* Header Meta Info */
+  .card-header {
+    display: flex;
+    align-items: center;
+    /* justify-content: center; */
+    margin-top: 3px;
+    margin-bottom: 15px;
+  }
+
+  .problem-badge {
+    font-family: 'Fira Code', ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--badge-text);
+    background: var(--badge-bg);
+    border: 1px solid var(--badge-border);
+    padding: 4px 12px;
+    border-radius: 100px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Math Canvas Area */
+  .math-viewport {
+    background-color: var(--math-box-bg);
+    border: 1px solid var(--math-box-border);
+    border-radius: 14px;
+    padding: 10px 16px;
+    min-height: 190px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .math-content {
+    font-size: 1.4rem;
+    line-height: 1.7;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+  .math-content.rendered {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Loading Skeleton */
+  .loading-skeleton {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--badge-border);
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Error Alert Banner */
+  .error-box {
+    background-color: var(--error-bg);
+    color: var(--error-text);
+    border: 1px solid var(--error-border);
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+</style>
+
 <div class="card-container">
-  <div id="math-question">Generating problem...</div>
+  <div class="math-card">
+    <div class="card-header">
+      <span class="problem-badge">{{ProblemID}}</span>
+    </div>
+    
+    <div class="math-viewport">
+      <div id="math-question" class="math-content">
+        <div class="loading-skeleton">
+          <div class="spinner"></div>
+          <span>Generating Problem...</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
 (function() {
-  // Check if we are on the back side
+  const el = document.getElementById('math-question');
+  
+  const renderMath = (latex) => {
+    el.innerHTML = latex;
+    if (window.MathJax) {
+      MathJax.typesetPromise([el]).then(() => {
+        el.classList.add('rendered');
+      });
+    } else {
+      el.classList.add('rendered');
+    }
+  };
+
+  // Check if on the back side
   const isBack = !!document.getElementById('is-back-side');
 
   if (isBack) {
-    // DO NOT generate new numbers — restore saved question from front
     const saved = sessionStorage.getItem('dynamic_math_state');
     if (saved) {
       const state = JSON.parse(saved);
-      const el = document.getElementById('math-question');
-      el.innerHTML = state.q;
-      if (window.MathJax) MathJax.typesetPromise([el]);
+      renderMath(state.q);
     }
     return;
   }
 
-  // --- FRONT SIDE ONLY: Generate new random numbers ---
+  // --- FRONT SIDE ONLY ---
   const id = "{{ProblemID}}".trim();
   const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
   let state = {};
 
-  // Loop safety guard
   let attempts = 0;
   const checkLimit = () => {
     if (++attempts > 200) {
-      throw new Error("Couldn't find answers after 200 guesses");
+      throw new Error("Couldn't find valid answers after 200 guesses");
     }
   };
 
@@ -43,7 +215,7 @@
           checkLimit();
           a = randInt(-2, 20);
           b = randInt(1, 5);
-          c = randInt(6, -5);
+          c = randInt(-5, 6);
           h_c = (c * c) - b;
           ans = h_c / a;
         } while (h_c <= 0 || h_c % a !== 0);
@@ -59,46 +231,46 @@
         let a, b, c, h_c, ans;
         attempts = 0;
         do {
-            checkLimit();
-            a = randInt(-2, 20);
-            b = randInt(1, 5);
-            c = randInt(-5, 6); // Fixed inverted order (-5 to 6)
-            h_c = c + (b * b);  // Updated to match h(m) = m + b^2
-            ans = h_c / a;
+          checkLimit();
+          a = randInt(-2, 20);
+          b = randInt(1, 5);
+          c = randInt(-5, 6);
+          h_c = c + (b * b);
+          ans = h_c / a;
         } while (h_c <= 0 || h_c % a !== 0);
 
         state = {
-            q: `\\[\\begin{aligned}
-            h(m) &= m + ${b}^2 \\\\[4pt]
-            g(m) &= \\frac{m}{${a}} \\\\[4pt]
-            (g \\circ h)(${c}) &= \\text{?}
-            \\end{aligned}\\]`,
-            sol: `\\[\\begin{aligned} (g \\circ h)(${c}) &= g(${h_c}) = \\mathbf{${ans}} \\end{aligned}\\]`
+          q: `\\[\\begin{aligned}
+          h(m) &= m + ${b}^2 \\\\[4pt]
+          g(m) &= \\frac{m}{${a}} \\\\[4pt]
+          (g \\circ h)(${c}) &= \\text{?}
+          \\end{aligned}\\]`,
+          sol: `\\[\\begin{aligned} (g \\circ h)(${c}) &= g(${h_c}) = \\mathbf{${ans}} \\end{aligned}\\]`
         };
         break;
       }
 
       case "composition3": {
         let a, b, c, n_c, ans;
-        ttempts = 0;
+        attempts = 0;
         do {
-            checkLimit();
-            a = randInt(-2, 5);
-            b = randInt(13, 20);
-            c = randInt(-4, 4);
-            n_c = (a * c) - b;  // Inner function: n(c) = a*c - b
-            ans = n_c * n_c;    // Outer function: r(n_c) = (n_c)^2
-        } while (a === 0 || n_c === 0); // Re-roll trivial cases (a=0 or result=0)
+          checkLimit();
+          a = randInt(-2, 5);
+          b = randInt(13, 20);
+          c = randInt(-4, 4);
+          n_c = (a * c) - b;
+          ans = n_c * n_c;
+        } while (a === 0 || n_c === 0);
 
         state = {
-            q: `\\[\\begin{aligned}
-            n(m) &= ${a}m - ${b} \\\\[4pt]
-            r(m) &= m^2 \\\\[4pt]
-            (r \\circ n)(${c}) &= \\text{?}
-            \\end{aligned}\\]`,
-            sol: `\\[\\begin{aligned}
-            \\; (r \\circ n)(${c}) &= r(${n_c}) = \\mathbf{${ans}}
-            \\end{aligned}\\]`
+          q: `\\[\\begin{aligned}
+          n(m) &= ${a}m - ${b} \\\\[4pt]
+          r(m) &= m^2 \\\\[4pt]
+          (r \\circ n)(${c}) &= \\text{?}
+          \\end{aligned}\\]`,
+          sol: `\\[\\begin{aligned}
+          (r \\circ n)(${c}) &= r(${n_c}) = \\mathbf{${ans}}
+          \\end{aligned}\\]`
         };
         break;
       }
@@ -110,31 +282,30 @@
           checkLimit();
           a = randInt(2, 5);
           b = randInt(1, 5);
-          c = randInt(1, 1);
+          c = randInt(2, 6);
           h_c = (c * c) - b;
           ans = h_c / a;
         } while (h_c <= 0 || h_c % a !== 0);
 
         state = {
-          q: `\\[\\begin{eqnarray*} g(m) &= \\frac{m}{${a}} \\\\[4pt] h(m) &= m^2 - ${b} \\\\[4pt] (g \\circ h)(${c}) &= \\text{?} \\end{eqnarray*}\\]`,
+          q: `\\[\\begin{aligned} g(m) &= \\frac{m}{${a}} \\\\[4pt] h(m) &= m^2 - ${b} \\\\[4pt] (g \\circ h)(${c}) &= \\text{?} \\end{aligned}\\]`,
           sol: `\\[\\begin{aligned} 1.\\; h(${c}) &= ${c}^2 - ${b} = ${c*c} - ${b} = ${h_c} \\\\[8pt] 2.\\; (g \\circ h)(${c}) &= g(${h_c}) = \\frac{${h_c}}{${a}} = \\mathbf{${ans}} \\end{aligned}\\]`
         };
         break;
       }
 
       default:
-        document.getElementById('math-question').innerHTML = `<em>Unknown ProblemID: "${id}"</em>`;
+        el.innerHTML = `<span style="color: var(--text-muted); font-style: italic;">Unknown ProblemID: "${id}"</span>`;
+        el.classList.add('rendered');
         return;
     }
 
     sessionStorage.setItem('dynamic_math_state', JSON.stringify(state));
-    const el = document.getElementById('math-question');
-    el.innerHTML = state.q;
-    if (window.MathJax) MathJax.typesetPromise([el]);
+    renderMath(state.q);
 
   } catch (err) {
-    const el = document.getElementById('math-question');
-    el.innerHTML = `<span style="color: #d32f2f; font-weight: bold;">${err.message}</span>`;
+    el.innerHTML = `<div class="error-box">⚠️ ${err.message}</div>`;
+    el.classList.add('rendered');
   }
 })();
 </script>
