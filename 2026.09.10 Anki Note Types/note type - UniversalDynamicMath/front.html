@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v0.7 -->
+<!-- front.html - do not delete this line nor modify. v0.8 -->
 <div class="card-container">
   <div class="math-card">
     <div class="card-header">
@@ -53,6 +53,74 @@
 
   try {
     switch (id) {
+      case "linearFunction1": {
+        let a, b;
+        attempts = 0;
+        do {
+          checkLimit();
+          a = randInt(-3, 3);
+          b = randInt(-3, 3);
+        } while (a === 0);
+
+        // SVG Graph Parameters
+        const size = 260;
+        const pad = 20;
+        const gridStep = (size - 2*20) / 10; // 10 units: -5 to +5
+        const center = size / 2;
+
+        const toSvgX = (x) => center + x * gridStep;
+        const toSvgY = (y) => center - y * gridStep;
+
+        // Generate Grid Lines & Axis Ticks
+        let gridLines = '';
+        let tickLabels = '';
+
+        for (let i = -5; i <= 5; i++) {
+          const pos = center + i * gridStep;
+          gridLines += `<line x1="${pos}" y1="${pad}" x2="${pos}" y2="${size - pad}" stroke="var(--text-muted)" stroke-opacity="0.5" stroke-dasharray="2 2" stroke-width="1" />`;
+          gridLines += `<line x1="${pad}" y1="${pos}" x2="${size - pad}" y2="${pos}" stroke="var(--text-muted)" stroke-opacity="0.5" stroke-dasharray="2 2" stroke-width="1" />`;
+          
+          if (i !== 0 && i % 2 === 0) {
+            tickLabels += `<text x="${pos}" y="${center + 14}" font-size="9" fill="var(--text-muted)" text-anchor="middle">${i}</text>`;
+            tickLabels += `<text x="${center - 6}" y="${pos + 3}" font-size="9" fill="var(--text-muted)" text-anchor="end">${i}</text>`;
+          }
+        }
+
+        // Calculate line endpoints (-5 to +5)
+        const x1 = -5, y1 = a * x1 + b;
+        const x2 = 5, y2 = a * x2 + b;
+
+        // Highlight key integer points on the line
+        const p1X = 0, p1Y = b;
+        const p2X = 1, p2Y = a * 1 + b;
+
+        const svg = `
+          <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="max-width:100%; height:auto; margin:0 auto 12px; display:block;">
+            ${gridLines}
+            <!-- Axes -->
+            <line x1="${pad}" y1="${center}" x2="${size - pad}" y2="${center}" stroke="var(--text-primary)" stroke-width="1.5" />
+            <line x1="${center}" y1="${pad}" x2="${center}" y2="${size - pad}" stroke="var(--text-primary)" stroke-width="1.5" />
+            ${tickLabels}
+            <!-- Plotted Line -->
+            <line x1="${toSvgX(x1)}" y1="${toSvgY(y1)}" x2="${toSvgX(x2)}" y2="${toSvgY(y2)}" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" />
+            <!-- Integer Reference Points -->
+            <circle cx="${toSvgX(p1X)}" cy="${toSvgY(p1Y)}" r="4" fill="#2563eb" />
+            <circle cx="${toSvgX(p2X)}" cy="${toSvgY(p2Y)}" r="4" fill="#2563eb" />
+          </svg>
+        `;
+
+        // Format LaTeX equation string
+        const aStr = a === 1 ? '' : a === -1 ? '-' : `${a}`;
+        const bStr = b > 0 ? `+ ${b}` : b < 0 ? `- ${Math.abs(b)}` : '';
+        const eqStr = `${aStr}x ${bStr}`.trim();
+
+        state = {
+          q: `${svg} \\[ \\begin{gathered} \\text{Find numbers of } \\\\ y = ax + b \\end{gathered} \\]`,
+          sol: `\\[ y = \\mathbf{${eqStr}} \\]`
+        };
+        break;
+      }
+
       case "composition1": {
         let a, b, c, h_c, ans;
         attempts = 0;
