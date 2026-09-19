@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v0.2 -->
+<!-- front.html - do not delete this line nor modify. v0.3 -->
 <div class="card-container">
   <div id="math-question">Generating problem...</div>
 </div>
@@ -48,7 +48,7 @@
         } while (h_c <= 0 || h_c % a !== 0);
 
         state = {
-          q: `\\[\\begin{eqnarray*} g(m) &= \\frac{m}{${a}} \\\\[4pt] h(m) &= m^2 - ${b} \\\\[4pt] (g \\circ h)(${c}) &= \\text{?} \\end{eqnarray*}\\]`,
+          q: `\\[\\begin{aligned} g(m) &= \\frac{m}{${a}} \\\\[4pt] h(m) &= m^2 - ${b} \\\\[4pt] (g \\circ h)(${c}) &= \\text{?} \\end{aligned}\\]`,
           sol: `\\[\\begin{aligned} (g \\circ h)(${c}) &= g(${h_c}) = \\mathbf{${ans}} \\end{aligned}\\]`
         };
         break;
