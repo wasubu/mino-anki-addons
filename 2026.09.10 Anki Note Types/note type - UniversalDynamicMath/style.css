@@ -18,6 +18,7 @@
     --error-bg: #fef2f2;
     --error-text: #991b1b;
     --error-border: #fecaca;
+    -moz-border-top-colors: #3b99f6;
   }
 
   /* Anki Native Dark Mode & AnkiMobile Night Mode */
@@ -151,3 +152,12 @@
     justify-content: center;
     gap: 8px;
   }
+
+  .card {
+    font-family: arial;
+    font-size: 20px;
+    line-height: 1.5;
+    text-align: center;
+    color: black;
+    background-color: white;
+}
