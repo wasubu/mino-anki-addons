@@ -1,16 +1,52 @@
-<!-- front.html - do not delete this line nor modify. v0 -->
- <div class="card-container">
+<!-- front.html - do not delete this line nor modify. v0.1 -->
+<div class="card-container">
   <div id="math-question">Generating problem...</div>
 </div>
 
 <script>
 (function() {
+  // Check if we are on the back side
+  const isBack = !!document.getElementById('is-back-side');
+
+  if (isBack) {
+    // DO NOT generate new numbers — restore saved question from front
+    const saved = sessionStorage.getItem('dynamic_math_state');
+    if (saved) {
+      const state = JSON.parse(saved);
+      const el = document.getElementById('math-question');
+      el.innerHTML = state.q;
+      if (window.MathJax) MathJax.typesetPromise([el]);
+    }
+    return;
+  }
+
+  // --- FRONT SIDE ONLY: Generate new random numbers ---
   const id = "{{ProblemID}}".trim();
   const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
   let state = {};
 
   switch (id) {
     case "composition1": {
+      let a, b, c, h_c, ans;
+      do {
+        a = randInt(2, 5);
+        b = randInt(1, 5);
+        c = randInt(1, 6);
+        h_c = (c * c) - b;
+        ans = h_c / a;
+      } while (h_c <= 0 || h_c % a !== 0);
+
+      state = {
+        q: `\\[\\begin{eqnarray*} g(m) &= \\frac{m}{${a}} \\\\[4pt] h(m) &= m^2 - ${b} \\\\[4pt] (g \\circ h)(${c}) &= \\text{?} \\end{eqnarray*}\\]`,
+        sol: `
+            \\[\\begin{aligned}
+            \\; (g \\circ h)(${c}) &= g(${h_c}) = \\mathbf{${ans}} \\end{aligned}\\]
+            `
+      };
+      break;
+    }
+
+    case "compositionTEMPLATE": {
       let a, b, c, h_c, ans;
       do {
         a = randInt(2, 5);
@@ -23,19 +59,6 @@
       state = {
         q: `\\[\\begin{eqnarray*} g(m) &= \\frac{m}{${a}} \\\\[4pt] h(m) &= m^2 - ${b} \\\\[4pt] (g \\circ h)(${c}) &= \\text{?} \\end{eqnarray*}\\]`,
         sol: `\\[\\begin{aligned} 1.\\; h(${c}) &= ${c}^2 - ${b} = ${c*c} - ${b} = ${h_c} \\\\[8pt] 2.\\; (g \\circ h)(${c}) &= g(${h_c}) = \\frac{${h_c}}{${a}} = \\mathbf{${ans}} \\end{aligned}\\]`
-      };
-      break;
-    }
-
-    case "power1": {
-      const coef = randInt(2, 9);
-      const exp = randInt(2, 6);
-      const ansCoef = coef * exp;
-      const ansExp = exp - 1;
-
-      state = {
-        q: `\\[ f(x) = ${coef}x^{${exp}}, \\quad f'(x) = \\text{?} \\]`,
-        sol: `\\[ f'(x) = ${coef} \\cdot ${exp}x^{${exp}-1} = \\mathbf{${ansCoef}x^{${ansExp}}} \\]`
       };
       break;
     }
