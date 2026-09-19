@@ -1,4 +1,4 @@
-<!-- front.html - do not delete this line nor modify. v0.1 -->
+<!-- front.html - do not delete this line nor modify. v0.2 -->
 <div class="card-container">
   <div id="math-question">Generating problem...</div>
 </div>
@@ -25,52 +25,67 @@
   const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
   let state = {};
 
-  switch (id) {
-    case "composition1": {
-      let a, b, c, h_c, ans;
-      do {
-        a = randInt(2, 5);
-        b = randInt(1, 5);
-        c = randInt(1, 6);
-        h_c = (c * c) - b;
-        ans = h_c / a;
-      } while (h_c <= 0 || h_c % a !== 0);
+  // Loop safety guard
+  let attempts = 0;
+  const checkLimit = () => {
+    if (++attempts > 200) {
+      throw new Error("Couldn't find answers after 200 guesses");
+    }
+  };
 
-      state = {
-        q: `\\[\\begin{eqnarray*} g(m) &= \\frac{m}{${a}} \\\\[4pt] h(m) &= m^2 - ${b} \\\\[4pt] (g \\circ h)(${c}) &= \\text{?} \\end{eqnarray*}\\]`,
-        sol: `
-            \\[\\begin{aligned}
-            \\; (g \\circ h)(${c}) &= g(${h_c}) = \\mathbf{${ans}} \\end{aligned}\\]
-            `
-      };
-      break;
+  try {
+    switch (id) {
+      case "composition1": {
+        let a, b, c, h_c, ans;
+        attempts = 0;
+        do {
+          checkLimit();
+          a = randInt(-2, 20);
+          b = randInt(1, 5);
+          c = randInt(6, -5);
+          h_c = (c * c) - b;
+          ans = h_c / a;
+        } while (h_c <= 0 || h_c % a !== 0);
+
+        state = {
+          q: `\\[\\begin{eqnarray*} g(m) &= \\frac{m}{${a}} \\\\[4pt] h(m) &= m^2 - ${b} \\\\[4pt] (g \\circ h)(${c}) &= \\text{?} \\end{eqnarray*}\\]`,
+          sol: `\\[\\begin{aligned} (g \\circ h)(${c}) &= g(${h_c}) = \\mathbf{${ans}} \\end{aligned}\\]`
+        };
+        break;
+      }
+
+      case "compositionTEMPLATE": {
+        let a, b, c, h_c, ans;
+        attempts = 0;
+        do {
+          checkLimit();
+          a = randInt(2, 5);
+          b = randInt(1, 5);
+          c = randInt(1, 1);
+          h_c = (c * c) - b;
+          ans = h_c / a;
+        } while (h_c <= 0 || h_c % a !== 0);
+
+        state = {
+          q: `\\[\\begin{eqnarray*} g(m) &= \\frac{m}{${a}} \\\\[4pt] h(m) &= m^2 - ${b} \\\\[4pt] (g \\circ h)(${c}) &= \\text{?} \\end{eqnarray*}\\]`,
+          sol: `\\[\\begin{aligned} 1.\\; h(${c}) &= ${c}^2 - ${b} = ${c*c} - ${b} = ${h_c} \\\\[8pt] 2.\\; (g \\circ h)(${c}) &= g(${h_c}) = \\frac{${h_c}}{${a}} = \\mathbf{${ans}} \\end{aligned}\\]`
+        };
+        break;
+      }
+
+      default:
+        document.getElementById('math-question').innerHTML = `<em>Unknown ProblemID: "${id}"</em>`;
+        return;
     }
 
-    case "compositionTEMPLATE": {
-      let a, b, c, h_c, ans;
-      do {
-        a = randInt(2, 5);
-        b = randInt(1, 5);
-        c = randInt(2, 6);
-        h_c = (c * c) - b;
-        ans = h_c / a;
-      } while (h_c <= 0 || h_c % a !== 0);
+    sessionStorage.setItem('dynamic_math_state', JSON.stringify(state));
+    const el = document.getElementById('math-question');
+    el.innerHTML = state.q;
+    if (window.MathJax) MathJax.typesetPromise([el]);
 
-      state = {
-        q: `\\[\\begin{eqnarray*} g(m) &= \\frac{m}{${a}} \\\\[4pt] h(m) &= m^2 - ${b} \\\\[4pt] (g \\circ h)(${c}) &= \\text{?} \\end{eqnarray*}\\]`,
-        sol: `\\[\\begin{aligned} 1.\\; h(${c}) &= ${c}^2 - ${b} = ${c*c} - ${b} = ${h_c} \\\\[8pt] 2.\\; (g \\circ h)(${c}) &= g(${h_c}) = \\frac{${h_c}}{${a}} = \\mathbf{${ans}} \\end{aligned}\\]`
-      };
-      break;
-    }
-
-    default:
-      document.getElementById('math-question').innerHTML = `<em>Unknown ProblemID: "${id}"</em>`;
-      return;
+  } catch (err) {
+    const el = document.getElementById('math-question');
+    el.innerHTML = `<span style="color: #d32f2f; font-weight: bold;">${err.message}</span>`;
   }
-
-  sessionStorage.setItem('dynamic_math_state', JSON.stringify(state));
-  const el = document.getElementById('math-question');
-  el.innerHTML = state.q;
-  if (window.MathJax) MathJax.typesetPromise([el]);
 })();
 </script>
