@@ -1,0 +1,18 @@
+<div id="cont1">{{Front}}</div>
+
+<script>
+// Get the element containing the content
+var containerDiv = document.getElementById("cont1");
+
+// Get the current HTML content
+var htmlContent = containerDiv.innerHTML;
+
+// Replace '[' with the opening span tag containing the bold weight and custom RGB color
+htmlContent = htmlContent.replace(/\[/g, '<span id="cont" class="hovertext" style="font-weight: bold; color: rgb(0, 179, 255);" data-hover="{{hover 1}}">');
+
+// Replace ']' with the closing span tag
+htmlContent = htmlContent.replace(/\]/g, '</span>');
+
+// Update the element's innerHTML with the modified content
+containerDiv.innerHTML = htmlContent;
+</script>

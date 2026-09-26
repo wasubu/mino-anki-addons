@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+
+.card {
+    font-family: 'Noto Sans JP', arial;
+    font-size: 20px;
+    text-align: center;
+    color: black;
+    background-color: white;
+}
+
+/*
+#cont {
+   color: blue;
+   text-decoration: underline;
+   cursor: pointer
+}
+*/
+
+.hovertext:before {
+   content: attr(data-hover);
+   display: inline-block;
+   position: absolute;
+   left: 50%;
+   transform: translate(-50%, 2.2em);
+   width: max-content;
+   max-width: 80%;
+   background-color: black;
+   color: white;
+   padding: 4px 15px;
+   margin-left: 8px;
+   visibility: hidden;
+   opacity: 0;
+	 border-radius: 20px;
+   font-weight: bold;
+   transition: opacity 0.5s ease-in-out;
+  }
+
+.hovertext:hover:before {
+  opacity: 1;
+  visibility: visible;
+}
+
+
