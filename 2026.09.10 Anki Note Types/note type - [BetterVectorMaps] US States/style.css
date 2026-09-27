@@ -1,5 +1,6 @@
-/* style.css - do not delete this line nor modify. v0 */
+/* style.css - do not delete this line nor modify. v0.1 */
 /* ---------- General ---------- */
+
 html,
 body {
   margin: 0;
@@ -75,7 +76,7 @@ input[type="text"] {
 /* ---------- Main Values ---------- */
 
 .value {
-  font-size: 150%;
+  font-size: 170%;
 }
 
 .value--top {
@@ -206,4 +207,38 @@ hr {
   opacity: 0.8;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16'/%3E%3Cpath d='m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0'/%3E%3C/svg%3E") no-repeat center / contain;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16'/%3E%3Cpath d='m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+/* ---------- CSS SVG Icons ---------- */
+
+/* Shared Base Styles */
+.value--name::before,
+.value--capital::before {
+  content: "";
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  margin-right: 0.35em;
+  vertical-align: -0.2em;
+  background-color: currentColor; /* Matches text color dynamically */
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* Name/State Icon */
+.value--name::before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cg fill='none' stroke='%23000' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M.707 13.438h12.75M3.86 5.687l3.222-2.53l3.222 2.53M4.35 7.813h5.464v5.625H4.35zM3.238 5.688h7.688v2.121H3.238zM1.618 7.81v5.628M12.546 7.81v5.625M.707 7.81h12.75M7.082 3.156V.674m0 0h1.25'/%3E%3Cpath d='M6.095 11.203a.93.93 0 0 1 .931-.93v0a.93.93 0 0 1 .931.93v2.235H6.095z'/%3E%3C/g%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cg fill='none' stroke='%23000' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M.707 13.438h12.75M3.86 5.687l3.222-2.53l3.222 2.53M4.35 7.813h5.464v5.625H4.35zM3.238 5.688h7.688v2.121H3.238zM1.618 7.81v5.628M12.546 7.81v5.625M.707 7.81h12.75M7.082 3.156V.674m0 0h1.25'/%3E%3Cpath d='M6.095 11.203a.93.93 0 0 1 .931-.93v0a.93.93 0 0 1 .931.93v2.235H6.095z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Capital Building Icon (Enlarged) */
+.value--capital::before {
+  width: 1.36em; /* Increased from 1.2em */
+  height: 1.36em;
+  vertical-align: -0.28em; /* Slightly adjusted so the larger icon stays centered with text */
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M21 5.5v14h2V21H1v-1.5h2V4.32l3.75-2.19l3.75 2.19V12h3V5.5zM19.5 7H15v5h3v7.5h1.5zm-9 6.5v6h6v-6zM6.75 3.87L4.5 5.18V19.5H9V5.18zM6 9V7h1.5v2zm0 1.5v2h1.5v-2zM6 16v-2h1.5v2zm12-7.5h-1.5v2H18zm-6 8V15h3v1.5z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='M21 5.5v14h2V21H1v-1.5h2V4.32l3.75-2.19l3.75 2.19V12h3V5.5zM19.5 7H15v5h3v7.5h1.5zm-9 6.5v6h6v-6zM6.75 3.87L4.5 5.18V19.5H9V5.18zM6 9V7h1.5v2zm0 1.5v2h1.5v-2zM6 16v-2h1.5v2zm12-7.5h-1.5v2H18zm-6 8V15h3v1.5z' clip-rule='evenodd'/%3E%3C/svg%3E");
 }
