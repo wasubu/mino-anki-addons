@@ -1,4 +1,4 @@
-<!-- timingMaker.html - v1.2 -->
+<!-- timingMaker.html - v1.3 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,7 +81,7 @@
               <span style="color: var(--accent-green);">🟢 Front Clip Start</span>
               <button class="btn" id="btn-set-front" style="padding: 2px 6px; font-size: 0.75rem;">Set Current</button>
             </div>
-            <input type="number" id="front-time-input" step="0.1" value="0.0">
+            <input type="number" id="front-time-input" step="0.01" value="0.00">
           </div>
 
           <div class="marker-card back">
@@ -89,7 +89,7 @@
               <span style="color: var(--accent-purple);">🟣 Back Clip Start</span>
               <button class="btn" id="btn-set-back" style="padding: 2px 6px; font-size: 0.75rem;">Set Current</button>
             </div>
-            <input type="number" id="back-time-input" step="0.1" value="0.0">
+            <input type="number" id="back-time-input" step="0.01" value="0.00">
           </div>
         </div>
       </div>
@@ -105,11 +105,11 @@
         <div class="cut-grid">
           <div>
             <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Cut Start (sec)</label>
-            <input type="number" id="cut-start-input" class="input-text" step="0.1" value="0.0" disabled>
+            <input type="number" id="cut-start-input" class="input-text" step="0.01" value="0.00" disabled>
           </div>
           <div>
             <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Cut End (sec)</label>
-            <input type="number" id="cut-end-input" class="input-text" step="0.1" value="0.0" disabled>
+            <input type="number" id="cut-end-input" class="input-text" step="0.01" value="0.00" disabled>
           </div>
         </div>
       </div>
@@ -208,6 +208,26 @@
       outputTiming.value = `${f}, ${b}`;
     }
 
+    function calculateNewMarkerTime(time, trimStart, trimEnd, hasMiddleCut, cutStart, cutEnd) {
+      if (time <= trimStart) return 0;
+      
+      const effectiveEnd = (trimEnd && trimEnd > 0) ? trimEnd : Infinity;
+      if (time >= effectiveEnd) {
+        const cutDuration = (hasMiddleCut && cutEnd > cutStart && cutStart >= trimStart && cutEnd <= effectiveEnd) ? (cutEnd - cutStart) : 0;
+        return Math.max(0, (effectiveEnd - trimStart) - cutDuration);
+      }
+
+      let newTime = time - trimStart;
+      if (hasMiddleCut && cutEnd > cutStart) {
+        if (time >= cutEnd) {
+          newTime -= (cutEnd - cutStart);
+        } else if (time > cutStart) {
+          newTime = cutStart - trimStart;
+        }
+      }
+      return Math.max(0, newTime);
+    }
+
     function isTrimOrCutModified() {
       if (!video.duration) return false;
       const trimChanged = Math.abs(trimStartSec - lastAppliedTrimStart) > 0.05 || Math.abs(trimEndSec - lastAppliedTrimEnd) > 0.05;
@@ -289,8 +309,8 @@
       // Default middle cut setup
       cutStartSec = video.duration * 0.4;
       cutEndSec = video.duration * 0.6;
-      cutStartInput.value = cutStartSec.toFixed(1);
-      cutEndInput.value = cutEndSec.toFixed(1);
+      cutStartInput.value = cutStartSec.toFixed(2);
+      cutEndInput.value = cutEndSec.toFixed(2);
 
       updateTrimButtonState();
       resizeCanvas();
@@ -370,7 +390,6 @@
           ffmpegArgs.push(
             '-i', inputName,
             '-af', 'loudnorm=I=-14.5:TP=-1.3:LRA=11',
-            '-vf', 'scale=-2:min(720\\,ih)',
             '-c:v', 'libvpx-vp9',
             '-deadline', 'realtime',
             '-cpu-used', '8',
@@ -396,6 +415,14 @@
 
         ffmpeg.FS('unlink', inputName);
         ffmpeg.FS('unlink', outputName);
+
+        // Shift front and back markers to reflect trimmed/cut clip timing
+        frontStartSec = calculateNewMarkerTime(frontStartSec, trimStartSec, trimEndSec, enableMiddleCut, cutStartSec, cutEndSec);
+        backStartSec = calculateNewMarkerTime(backStartSec, trimStartSec, trimEndSec, enableMiddleCut, cutStartSec, cutEndSec);
+
+        frontTimeInput.value = frontStartSec.toFixed(2);
+        backTimeInput.value = backStartSec.toFixed(2);
+        updateTimingString();
 
         // Decode newly created audio to update canvas waveform
         try {
@@ -632,21 +659,21 @@
         
         if (draggedHandle === 'cutStart') {
           cutStartSec = Math.max(trimStartSec, Math.min(time, cutEndSec - 0.2));
-          cutStartInput.value = cutStartSec.toFixed(1);
+          cutStartInput.value = cutStartSec.toFixed(2);
         }
         if (draggedHandle === 'cutEnd') {
           cutEndSec = Math.max(cutStartSec + 0.2, Math.min(time, trimEndSec));
-          cutEndInput.value = cutEndSec.toFixed(1);
+          cutEndInput.value = cutEndSec.toFixed(2);
         }
 
         if (draggedHandle === 'front') {
           frontStartSec = time;
-          frontTimeInput.value = frontStartSec.toFixed(1);
+          frontTimeInput.value = frontStartSec.toFixed(2);
           updateTimingString();
         }
         if (draggedHandle === 'back') {
           backStartSec = time;
-          backTimeInput.value = backStartSec.toFixed(1);
+          backTimeInput.value = backStartSec.toFixed(2);
           updateTimingString();
         }
 
@@ -706,14 +733,14 @@
 
     btnSetFront.addEventListener('click', () => {
       frontStartSec = video.currentTime;
-      frontTimeInput.value = frontStartSec.toFixed(1);
+      frontTimeInput.value = frontStartSec.toFixed(2);
       updateTimingString();
       drawTimeline();
     });
 
     btnSetBack.addEventListener('click', () => {
       backStartSec = video.currentTime;
-      backTimeInput.value = backStartSec.toFixed(1);
+      backTimeInput.value = backStartSec.toFixed(2);
       updateTimingString();
       drawTimeline();
     });
