@@ -1,5 +1,5 @@
-<!-- back.html - do not delete or modify this line - v0.1 -->
- <div class="video-wrapper" onclick="replayVideo()">
+<!-- back.html - do not delete or modify this line - v0.2 -->
+<div class="video-wrapper" onclick="replayVideo()">
   <video id="card-video" src="{{Video}}" autoplay playsinline preload="auto"></video>
   <div class="video-overlay">
     <div class="video-overlay-icon">
@@ -21,11 +21,13 @@
   var vid = document.getElementById('card-video');
   var timingElem = document.getElementById('hidden-timing');
   var timingRaw = timingElem ? timingElem.innerText.trim() : '';
-  
-  // Parse timing: second value is back/chorus start time
-  var parts = timingRaw.split(',').map(function(s) { return parseFloat(s.trim()) || 0; });
+
+  // Parse valid numbers from timing string
+  var parts = timingRaw ? timingRaw.split(',').map(function(s) { return parseFloat(s.trim()); }).filter(function(n) { return !isNaN(n); }) : [];
+
+  // 2 values -> use 2nd value; 1 value -> use 1st value; 0 values -> default to 0
   var startTime = parts.length > 1 ? parts[1] : (parts[0] || 0);
-  var duration = 5; // Play chorus for 5 seconds
+  var duration = 5; // Play for 5 seconds
 
   function checkTime() {
     if (vid.currentTime >= startTime + duration) {
