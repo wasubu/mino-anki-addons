@@ -1,0 +1,1078 @@
+<!-- timingMaker.html - do not delete this line nor modify. v10 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+  <title>Anki Timing Generator v6</title>
+
+  <!-- 1. Load coi-serviceworker FIRST before any script using SharedArrayBuffer -->
+  <script src="https://unpkg.com/coi-serviceworker/coi-serviceworker.min.js"></script>
+
+  <!-- 2. FFmpeg and styles -->
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Style for Download WebM Button Active Blue State */
+    .btn-download-webm {
+      background-color: #2a2f3d;
+      color: #8a94a6;
+      border: 1px solid #3a4154;
+      cursor: not-allowed;
+      transition: all 0.3s ease;
+      opacity: 0.6;
+    }
+
+    .btn-download-webm.blue-active {
+      background-color: #0066ff !important;
+      color: #ffffff !important;
+      border-color: #0052cc !important;
+      opacity: 1 !important;
+      cursor: pointer !important;
+      box-shadow: 0 0 12px rgba(0, 102, 255, 0.6);
+    }
+
+    .btn-download-webm.blue-active:hover {
+      background-color: #0052cc !important;
+      box-shadow: 0 0 16px rgba(0, 102, 255, 0.8);
+    }
+
+    /* Style for Apply Trim Purple Active State */
+    .btn-download-webm.purple-active {
+      background-color: #8b5cf6 !important;
+      color: #ffffff !important;
+      border-color: #7c3aed !important;
+      opacity: 1 !important;
+      cursor: pointer !important;
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+    }
+
+    .btn-download-webm.purple-active:hover {
+      background-color: #7c3aed !important;
+      box-shadow: 0 0 16px rgba(139, 92, 246, 0.8);
+    }
+
+    .btn-revert-trim {
+      background-color: #3a4154;
+      color: #ffffff;
+      border: 1px solid #4f5870;
+      transition: all 0.2s ease;
+    }
+
+    .btn-revert-trim:hover {
+      background-color: #4f5870;
+    }
+
+    .select-speed {
+      background-color: #1a1d24;
+      color: #ffffff;
+      border: 1px solid #2f3542;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- FULLSCREEN DRAG & DROP OVERLAY -->
+  <div class="drop-overlay" id="drop-overlay">
+    <div class="drop-message">
+      <div class="drop-icon">🎬</div>
+      <h2>Drop the vids here!</h2>
+      <p>Release to automatically load video or audio</p>
+    </div>
+  </div>
+
+  <header style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px;">
+    <h1>🎬 Anki Timing Generator v6</h1>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <button class="btn btn-revert-trim" id="btn-revert-trim" style="display: none;">🔄 Revert Trim</button>
+      <button class="btn btn-download-webm" id="btn-download-webm" disabled>⬇️ Download WebM</button>
+      <label class="file-upload-btn">
+        📁 Load Media File
+        <input type="file" id="media-file" accept="video/*,audio/*">
+      </label>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    
+    <!-- LEFT COLUMN: Video Preview matching Right Column Height -->
+    <div class="col-left">
+      <div class="card video-card">
+        <div class="video-container">
+          <video id="video-preview" playsinline></video>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+          <button class="btn" id="btn-play">▶ Play / Pause</button>
+          
+          <select id="playback-speed" class="select-speed" title="Playback Speed">
+            <option value="0.5">0.5x</option>
+            <option value="0.75">0.75x</option>
+            <option value="1" selected>1.0x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2.0x</option>
+          </select>
+
+          <span id="file-name" style="font-size: 0.85rem; color: var(--text-muted); flex-grow: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">No file loaded</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Sentence, Stats, Word Chips, Timings Output -->
+    <div class="col-right">
+      <div class="card">
+        <div class="form-group">
+          <label for="sentence-input">Sentence Text</label>
+          <input type="text" id="sentence-input" value="You live to see this world crumble to dust and blow away.">
+        </div>
+
+        <!-- Live Stats Box -->
+        <div class="stats-container">
+          <div class="stat-box">
+            <span class="stat-title">Word Count</span>
+            <span class="stat-value" id="stat-word-count">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-title">Dummy Count</span>
+            <span class="stat-value" id="stat-dummy-count">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-title">LAST WORDS PUT</span>
+            <span class="stat-value" id="stat-put-last-word">0</span>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label>Word Timing Progress</label>
+          <div class="words-container" id="words-container"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex-row" style="justify-content: space-between; margin-bottom: 8px;">
+          <label for="output-timings">Generated {{Timings}} String</label>
+          <button class="btn btn-primary" id="btn-copy">📋 Copy {{Timings}}</button>
+        </div>
+        <input type="text" class="output-box" id="output-timings" value="0">
+        <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">Edit values directly and press Enter or exit box to update timeline.</span>
+      </div>
+    </div>
+
+    <!-- SPANNING TWO COLUMNS: Audio Waveform & Draggable Timeline -->
+    <div class="col-timeline">
+      <div class="card" style="padding: 14px;">
+        <label style="margin-bottom: 8px; display: block;">Audio Waveform & Markers Timeline</label>
+        
+        <div class="timeline-wrapper" id="timeline-wrapper">
+          <canvas id="waveform-canvas"></canvas>
+        </div>
+
+        <div class="hotkey-legend">
+          <span><kbd>Space</kbd> Play / Pause</span>
+          <span><kbd>A</kbd> Add Marker</span>
+          <span><kbd>Drag House Handle</kbd> Reposition</span>
+          <span><kbd>Dbl-Click House</kbd> Delete Marker</span>
+          <span><kbd>Drag Side Handles</kbd> Trim Video</span>
+          <span><kbd>Click Waveform</kbd> Seek Video</span>
+          <span><kbd>Ctrl + Z</kbd> Undo / Revert</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast">Copied to Clipboard!</div>
+
+  <script>
+// --- State & History Engine (Ctrl+Z Support) ---
+let historyStack = [];
+let historyIndex = -1;
+
+let currentState = {
+  sentence: "",
+  markers: [] // Absolute timestamps in milliseconds
+};
+
+let words = [];
+let audioBuffer = null;
+let originalAudioBuffer = null;
+let cumulativeTrimOffsetMs = 0;
+let draggedMarkerIdx = null;
+let isScrubbing = false;
+let hoveredMarkerIdx = null;
+let hoveredWordIdx = null;
+let dragCounter = 0;
+
+// --- Video Trimming & Original Master Copy State ---
+let originalMediaFile = null;
+let trimStartSec = 0;
+let trimEndSec = 0;
+let lastAppliedTrimStart = 0;
+let lastAppliedTrimEnd = 0;
+let draggedTrimHandle = null; // 'start' | 'end' | null
+let hoveredTrimHandle = null; // 'start' | 'end' | null
+
+// FFmpeg Conversion State & Logger
+let ffmpeg = null;
+let ffmpegLogs = [];
+let convertedWebmBlobUrl = null;
+let convertedFileName = '';
+
+// Elements
+const sentenceInput = document.getElementById('sentence-input');
+const mediaFileInput = document.getElementById('media-file');
+const fileNameDisplay = document.getElementById('file-name');
+const video = document.getElementById('video-preview');
+const canvas = document.getElementById('waveform-canvas');
+const ctx = canvas.getContext('2d');
+const timelineWrapper = document.getElementById('timeline-wrapper');
+const wordsContainer = document.getElementById('words-container');
+const outputTimings = document.getElementById('output-timings');
+const btnPlay = document.getElementById('btn-play');
+const playbackSpeedSelect = document.getElementById('playback-speed');
+const btnCopy = document.getElementById('btn-copy');
+const btnDownloadWebm = document.getElementById('btn-download-webm');
+const btnRevertTrim = document.getElementById('btn-revert-trim');
+const toast = document.getElementById('toast');
+const dropOverlay = document.getElementById('drop-overlay');
+const statWordCount = document.getElementById('stat-word-count');
+const statDummyCount = document.getElementById('stat-dummy-count');
+const statPutLastWord = document.getElementById('stat-put-last-word');
+
+// --- Playback Speed Control ---
+playbackSpeedSelect.addEventListener('change', () => {
+  video.playbackRate = parseFloat(playbackSpeedSelect.value);
+});
+
+video.addEventListener('loadeddata', () => {
+  video.playbackRate = parseFloat(playbackSpeedSelect.value);
+});
+
+// --- Check if Trim State is Modified ---
+function isTrimChanged() {
+  if (!video.duration) return false;
+  return (
+    Math.abs(trimStartSec - lastAppliedTrimStart) > 0.05 ||
+    Math.abs(trimEndSec - lastAppliedTrimEnd) > 0.05
+  );
+}
+
+// --- Dynamic Button State Update ---
+function updateTrimButtonState() {
+  if (!originalMediaFile) {
+    btnDownloadWebm.disabled = true;
+    btnDownloadWebm.classList.remove('blue-active', 'purple-active');
+    btnDownloadWebm.textContent = '⬇️ Download WebM';
+    btnRevertTrim.style.display = 'none';
+    return;
+  }
+
+  if (cumulativeTrimOffsetMs > 0 || isTrimChanged() || convertedWebmBlobUrl) {
+    btnRevertTrim.style.display = 'inline-block';
+  } else {
+    btnRevertTrim.style.display = 'none';
+  }
+
+  if (isTrimChanged()) {
+    btnDownloadWebm.disabled = false;
+    btnDownloadWebm.classList.remove('blue-active');
+    btnDownloadWebm.classList.add('purple-active');
+    btnDownloadWebm.textContent = '✂️ Apply Trim';
+  } else if (convertedWebmBlobUrl || originalMediaFile.name.toLowerCase().endsWith('.webm')) {
+    btnDownloadWebm.disabled = false;
+    btnDownloadWebm.classList.remove('purple-active');
+    btnDownloadWebm.classList.add('blue-active');
+    btnDownloadWebm.textContent = '⬇️ Download WebM';
+  }
+}
+
+// --- State Stack Management ---
+function pushState(newState) {
+  historyStack = historyStack.slice(0, historyIndex + 1);
+  const stateCopy = JSON.parse(JSON.stringify(newState));
+  historyStack.push(stateCopy);
+  historyIndex = historyStack.length - 1;
+  applyState(stateCopy);
+}
+
+function undo() {
+  if (historyIndex > 0) {
+    historyIndex--;
+    applyState(historyStack[historyIndex]);
+  }
+}
+
+function redo() {
+  if (historyIndex < historyStack.length - 1) {
+    historyIndex++;
+    applyState(historyStack[historyIndex]);
+  }
+}
+
+function applyState(state) {
+  currentState = JSON.parse(JSON.stringify(state));
+  if (sentenceInput.value !== currentState.sentence) {
+    sentenceInput.value = currentState.sentence;
+  }
+  words = currentState.sentence ? currentState.sentence.split(/\s+/).filter(Boolean) : [];
+  
+  updateStats();
+  renderWords();
+  
+  if (document.activeElement !== outputTimings) {
+    updateOutput();
+  }
+  drawTimeline();
+}
+
+// --- Calculate & Update Statistics ---
+function updateStats() {
+  const wordCount = words.length;
+  statWordCount.textContent = wordCount;
+
+  if (wordCount === 0) {
+    statDummyCount.textContent = 0;
+    statPutLastWord.textContent = 0;
+    return;
+  }
+
+  const dummyCount = (wordCount <= 5) ? 2 : 1;
+  statDummyCount.textContent = dummyCount;
+
+  let putLastWord = 0;
+  if (wordCount >= 13) {
+    putLastWord = 2;
+  } else if (wordCount >= 6) {
+    putLastWord = 1;
+  } else {
+    putLastWord = 0;
+  }
+  statPutLastWord.textContent = putLastWord;
+}
+
+// --- Resize Canvas ---
+function resizeCanvas() {
+  canvas.width = timelineWrapper.clientWidth * window.devicePixelRatio;
+  canvas.height = timelineWrapper.clientHeight * window.devicePixelRatio;
+  drawTimeline();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// --- Reset Download Button State ---
+function resetDownloadButton() {
+  if (convertedWebmBlobUrl) {
+    URL.revokeObjectURL(convertedWebmBlobUrl);
+    convertedWebmBlobUrl = null;
+  }
+  convertedFileName = '';
+  ffmpegLogs = [];
+  updateTrimButtonState();
+}
+
+// --- FFmpeg In-Browser Conversion & Trim Function ---
+async function processMediaWithFFmpeg() {
+  if (!originalMediaFile) return;
+
+  const file = originalMediaFile;
+  const extension = file.name.split('.').pop().toLowerCase();
+  const currentTrimStart = trimStartSec;
+  const currentTrimEnd = trimEndSec;
+
+  btnDownloadWebm.disabled = true;
+  btnDownloadWebm.textContent = '⏳ Loading FFmpeg...';
+
+  try {
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    if (!ffmpeg) {
+      ffmpeg = createFFmpeg({
+        log: true,
+        logger: ({ message }) => {
+          console.log(message);
+          ffmpegLogs.push(message);
+        }
+      });
+    }
+
+    if (!ffmpeg.isLoaded()) {
+      await ffmpeg.load();
+    }
+
+    ffmpeg.setProgress(({ ratio }) => {
+      const pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+      btnDownloadWebm.textContent = isTrimChanged() ? `⏳ Trimming (${pct}%)...` : `⏳ Converting (${pct}%)...`;
+    });
+
+    const inputName = `input_${Date.now()}.${extension}`;
+    const outputName = `output_${Date.now()}.webm`;
+
+    ffmpeg.FS('writeFile', inputName, await fetchFile(file));
+
+    const ffmpegArgs = [];
+    
+    // Fast Input Seeking
+    if (trimStartSec > 0 || (video.duration && trimEndSec < video.duration)) {
+      ffmpegArgs.push('-ss', trimStartSec.toFixed(3));
+      ffmpegArgs.push('-to', trimEndSec.toFixed(3));
+    }
+
+    ffmpegArgs.push(
+      '-i', inputName,
+      '-vf', 'scale=-2:min(720\\,ih)',
+      '-c:v', 'libvpx-vp9',
+      '-deadline', 'realtime',
+      '-cpu-used', '8',
+      '-crf', '32',
+      '-b:v', '0',
+      '-pix_fmt', 'yuv420p',
+      '-af', 'loudnorm=I=-14:TP=-1.0:LRA=11',
+      '-c:a', 'libopus',
+      '-b:a', '96k',
+      '-y', outputName
+    );
+
+    await ffmpeg.run(...ffmpegArgs);
+
+    const data = ffmpeg.FS('readFile', outputName);
+    const blob = new Blob([data.buffer], { type: 'video/webm' });
+
+    if (convertedWebmBlobUrl) {
+      URL.revokeObjectURL(convertedWebmBlobUrl);
+    }
+    convertedWebmBlobUrl = URL.createObjectURL(blob);
+
+    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+    convertedFileName = `${baseName}_anki.webm`;
+
+    ffmpeg.FS('unlink', inputName);
+    ffmpeg.FS('unlink', outputName);
+
+    // Shift existing markers to match new video timeline
+    const trimShiftMs = Math.round(currentTrimStart * 1000);
+    const newDurationMs = Math.round((currentTrimEnd - currentTrimStart) * 1000);
+
+    cumulativeTrimOffsetMs += trimShiftMs;
+
+    const shiftedMarkers = currentState.markers
+      .map(m => m - trimShiftMs)
+      .filter(m => m >= 0 && m <= newDurationMs);
+
+    pushState({
+      sentence: currentState.sentence,
+      markers: shiftedMarkers
+    });
+
+    // Re-decode audio waveform for the trimmed clip
+    try {
+      const blobBuffer = await blob.arrayBuffer();
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioBuffer = await audioCtx.decodeAudioData(blobBuffer);
+    } catch (err) {
+      console.warn('Trimmed audio waveform decode failed:', err);
+    }
+
+    lastAppliedTrimStart = 0;
+    lastAppliedTrimEnd = 0;
+    trimStartSec = 0;
+    trimEndSec = 0;
+
+    updateTrimButtonState();
+    video.src = convertedWebmBlobUrl;
+
+  } catch (err) {
+    console.error('FFmpeg web processing failed:', err);
+    ffmpegLogs.push(`JS Exception: ${err.message || err}`);
+    btnDownloadWebm.disabled = false;
+    btnDownloadWebm.classList.remove('purple-active');
+    btnDownloadWebm.classList.add('blue-active');
+    btnDownloadWebm.textContent = '❌ Processing Failed (Click for Logs)';
+  }
+}
+
+// --- Download / Trim Button Click Listener ---
+btnDownloadWebm.addEventListener('click', () => {
+  if (isTrimChanged()) {
+    processMediaWithFFmpeg();
+  } else if (convertedWebmBlobUrl || (originalMediaFile && originalMediaFile.name.toLowerCase().endsWith('.webm'))) {
+    const downloadUrl = convertedWebmBlobUrl || video.src;
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = convertedFileName || originalMediaFile.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } else if (ffmpegLogs.length > 0) {
+    const logOutput = ffmpegLogs.join('\n');
+    navigator.clipboard.writeText(logOutput).then(() => {
+      toast.textContent = 'Logs copied to Clipboard!';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    });
+  }
+});
+
+// --- Revert Trim Click Listener ---
+btnRevertTrim.addEventListener('click', () => {
+  if (!originalMediaFile) return;
+
+  if (convertedWebmBlobUrl) {
+    URL.revokeObjectURL(convertedWebmBlobUrl);
+    convertedWebmBlobUrl = null;
+  }
+
+  video.src = URL.createObjectURL(originalMediaFile);
+  audioBuffer = originalAudioBuffer;
+
+  // Restore shifted markers back to original positions
+  if (cumulativeTrimOffsetMs > 0) {
+    const restoredMarkers = currentState.markers.map(m => m + cumulativeTrimOffsetMs);
+    pushState({
+      sentence: currentState.sentence,
+      markers: restoredMarkers
+    });
+    cumulativeTrimOffsetMs = 0;
+  }
+
+  trimStartSec = 0;
+  trimEndSec = video.duration || 0;
+  lastAppliedTrimStart = 0;
+  lastAppliedTrimEnd = video.duration || 0;
+
+  resetDownloadButton();
+  drawTimeline();
+});
+
+// --- Core Media Loader Function ---
+async function loadMediaFile(file) {
+  if (!file) return;
+
+  originalMediaFile = file;
+  cumulativeTrimOffsetMs = 0;
+  fileNameDisplay.textContent = file.name;
+  video.src = URL.createObjectURL(file);
+
+  trimStartSec = 0;
+  trimEndSec = 0;
+  lastAppliedTrimStart = 0;
+  lastAppliedTrimEnd = 0;
+
+  resetDownloadButton();
+
+  const extension = file.name.split('.').pop().toLowerCase();
+  if (extension !== 'webm') {
+    processMediaWithFFmpeg();
+  }
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    originalAudioBuffer = audioBuffer;
+    drawTimeline();
+  } catch (err) {
+    console.warn('Audio waveform decode bypassed:', err);
+    audioBuffer = null;
+    originalAudioBuffer = null;
+    drawTimeline();
+  }
+}
+
+video.addEventListener('loadedmetadata', () => {
+  if (trimEndSec === 0 || trimEndSec > video.duration) {
+    trimEndSec = video.duration;
+    lastAppliedTrimEnd = video.duration;
+  }
+  drawTimeline();
+  updateTrimButtonState();
+});
+
+mediaFileInput.addEventListener('change', (e) => {
+  if (e.target.files && e.target.files[0]) {
+    loadMediaFile(e.target.files[0]);
+  }
+});
+
+// --- Drag and Drop Overlay ---
+window.addEventListener('dragenter', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter++;
+  
+  if (e.dataTransfer.types && (e.dataTransfer.types.includes('Files') || e.dataTransfer.types[0] === 'Files')) {
+    dropOverlay.classList.add('active');
+  }
+});
+
+window.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+window.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter--;
+  if (dragCounter <= 0) {
+    dragCounter = 0;
+    dropOverlay.classList.remove('active');
+  }
+});
+
+window.addEventListener('drop', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter = 0;
+  dropOverlay.classList.remove('active');
+
+  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    loadMediaFile(e.dataTransfer.files[0]);
+  }
+});
+
+// --- Draw Markers, Waveform & Trim Handles ---
+function drawUpsideDownHouse(x, y, width, height, roofHeight, color, isHovered) {
+  const hw = width / 2;
+  ctx.beginPath();
+  ctx.moveTo(x - hw, y);
+  ctx.lineTo(x + hw, y);
+  ctx.lineTo(x + hw, y + height - roofHeight);
+  ctx.lineTo(x, y + height);
+  ctx.lineTo(x - hw, y + height - roofHeight);
+  ctx.closePath();
+
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.strokeStyle = isHovered ? '#ffffff' : '#000000';
+  ctx.lineWidth = 1.5 * window.devicePixelRatio;
+  ctx.stroke();
+}
+
+function drawTrimHandles(duration, w, h, scale) {
+  if (!duration) return;
+
+  const startX = (trimStartSec / duration) * w;
+  const endX = (trimEndSec / duration) * w;
+
+  // Darken trimmed-out side regions
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  if (startX > 0) ctx.fillRect(0, 0, startX, h);
+  if (endX < w) ctx.fillRect(endX, 0, w - endX, h);
+
+  const trimActive = isTrimChanged();
+  const handleColor = trimActive ? '#0066ff' : '#6c757d';
+  const handleWidth = 8 * scale;
+
+  // Left Trim Handle (Start)
+  ctx.fillStyle = (hoveredTrimHandle === 'start' || draggedTrimHandle === 'start') ? '#38ef7d' : handleColor;
+  ctx.fillRect(startX, 0, handleWidth, h);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(startX + (2 * scale), (h / 2) - (10 * scale), 2 * scale, 20 * scale);
+  ctx.fillRect(startX + (5 * scale), (h / 2) - (10 * scale), 2 * scale, 20 * scale);
+
+  // Right Trim Handle (End)
+  ctx.fillStyle = (hoveredTrimHandle === 'end' || draggedTrimHandle === 'end') ? '#38ef7d' : handleColor;
+  ctx.fillRect(endX - handleWidth, 0, handleWidth, h);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(endX - handleWidth + (1 * scale), (h / 2) - (10 * scale), 2 * scale, 20 * scale);
+  ctx.fillRect(endX - handleWidth + (4 * scale), (h / 2) - (10 * scale), 2 * scale, 20 * scale);
+}
+
+function drawTimeline() {
+  const w = canvas.width;
+  const h = canvas.height;
+  const scale = window.devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  ctx.fillStyle = '#0a0c10';
+  ctx.fillRect(0, 0, w, h);
+
+  const duration = video.duration || 1;
+
+  if (audioBuffer) {
+    const rawData = audioBuffer.getChannelData(0);
+    const step = Math.ceil(rawData.length / w);
+    const amp = h / 2;
+
+    ctx.fillStyle = '#262c3a';
+    ctx.beginPath();
+    for (let i = 0; i < w; i++) {
+      let min = 1.0, max = -1.0;
+      for (let j = 0; j < step; j++) {
+        const datum = rawData[(i * step) + j];
+        if (datum < min) min = datum;
+        if (datum > max) max = datum;
+      }
+      ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+    }
+  }
+
+  // Draw Trim Handles & Dimmed Out Bounds
+  drawTrimHandles(duration, w, h, scale);
+
+  // Draw Word Markers
+  currentState.markers.forEach((ms, idx) => {
+    const x = (ms / 1000 / duration) * w;
+    const isHovered = (hoveredMarkerIdx === idx || draggedMarkerIdx === idx || hoveredWordIdx === idx);
+
+    ctx.strokeStyle = isHovered ? '#ff6b81' : '#ff4757';
+    ctx.lineWidth = (isHovered ? 3 : 2) * scale;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+
+    const markerWidth = (isHovered ? 18 : 16) * scale;
+    const markerHeight = (isHovered ? 28 : 26) * scale;
+    const roofHeight = 10 * scale;
+    drawUpsideDownHouse(x, 2 * scale, markerWidth, markerHeight, roofHeight, isHovered ? '#ff6b81' : '#ff4757', isHovered);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${9.5 * scale}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(idx + 1, x, 14 * scale);
+  });
+
+  // Draw Playhead
+  const curTime = video.currentTime || 0;
+  const playheadX = (curTime / duration) * w;
+
+  ctx.strokeStyle = '#00f2fe';
+  ctx.lineWidth = 2 * scale;
+  ctx.beginPath();
+  ctx.moveTo(playheadX, 0);
+  ctx.lineTo(playheadX, h);
+  ctx.stroke();
+
+  ctx.fillStyle = '#00f2fe';
+  ctx.beginPath();
+  ctx.arc(playheadX, 6 * scale, 5 * scale, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function animate() {
+  drawTimeline();
+  updateActiveWordHighlight();
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+function updateActiveWordHighlight() {
+  if (!video || currentState.markers.length === 0) return;
+
+  const currentTimeMs = video.currentTime * 1000;
+  let activeIdx = -1;
+
+  for (let i = currentState.markers.length - 1; i >= 0; i--) {
+    if (currentTimeMs >= currentState.markers[i]) {
+      const nextTime = (i < currentState.markers.length - 1) ? currentState.markers[i + 1] : (currentState.markers[i] + 600);
+      if (currentTimeMs < nextTime) {
+        activeIdx = i;
+      }
+      break;
+    }
+  }
+
+  const chips = wordsContainer.querySelectorAll('.word-chip');
+  chips.forEach((chip, idx) => {
+    if (idx === activeIdx) {
+      chip.classList.add('timing-active');
+    } else {
+      chip.classList.remove('timing-active');
+    }
+
+    if (hoveredMarkerIdx === idx || hoveredWordIdx === idx) {
+      chip.classList.add('hover-highlight');
+    } else {
+      chip.classList.remove('hover-highlight');
+    }
+  });
+}
+
+function getTrimHandleAtPos(clientX) {
+  if (!video.duration) return null;
+  const rect = timelineWrapper.getBoundingClientRect();
+  const clickX = clientX - rect.left;
+  const duration = video.duration;
+
+  const startX = (trimStartSec / duration) * rect.width;
+  const endX = (trimEndSec / duration) * rect.width;
+
+  if (Math.abs(clickX - startX) <= 12) return 'start';
+  if (Math.abs(clickX - endX) <= 12) return 'end';
+
+  return null;
+}
+
+function getHouseHandleIndexAtPos(clientX, clientY) {
+  if (!video.duration) return null;
+  const rect = timelineWrapper.getBoundingClientRect();
+  const clickX = clientX - rect.left;
+  const clickY = clientY - rect.top;
+  const duration = video.duration;
+
+  if (clickY < 0 || clickY > 28) return null;
+
+  for (let i = 0; i < currentState.markers.length; i++) {
+    const markerX = (currentState.markers[i] / 1000 / duration) * rect.width;
+    if (Math.abs(markerX - clickX) <= 10) {
+      return i;
+    }
+  }
+  return null;
+}
+
+timelineWrapper.addEventListener('mousedown', (e) => {
+  const trimHandle = getTrimHandleAtPos(e.clientX);
+  if (trimHandle !== null) {
+    draggedTrimHandle = trimHandle;
+    if (!video.paused) video.pause();
+    return;
+  }
+
+  const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
+  if (hitIdx !== null) {
+    draggedMarkerIdx = hitIdx;
+    if (!video.paused) video.pause();
+  } else {
+    isScrubbing = true;
+    seekToMouse(e);
+  }
+});
+
+// Double click marker to delete
+timelineWrapper.addEventListener('dblclick', (e) => {
+  const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
+  if (hitIdx !== null) {
+    stopAllDragging();
+    const nextState = JSON.parse(JSON.stringify(currentState));
+    nextState.markers.splice(hitIdx, 1);
+    pushState(nextState);
+  }
+});
+
+function stopAllDragging() {
+  if (draggedMarkerIdx !== null) {
+    pushState(currentState);
+    draggedMarkerIdx = null;
+  }
+  if (draggedTrimHandle !== null) {
+    draggedTrimHandle = null;
+    updateTrimButtonState();
+  }
+  isScrubbing = false;
+}
+
+window.addEventListener('mousemove', (e) => {
+  if (e.buttons === 0 && (isScrubbing || draggedMarkerIdx !== null || draggedTrimHandle !== null)) {
+    stopAllDragging();
+    return;
+  }
+
+  const rect = timelineWrapper.getBoundingClientRect();
+
+  const trimHandle = getTrimHandleAtPos(e.clientX);
+  hoveredTrimHandle = (draggedTrimHandle !== null) ? draggedTrimHandle : trimHandle;
+
+  if (hoveredTrimHandle !== null) {
+    timelineWrapper.style.cursor = 'ew-resize';
+  } else {
+    const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
+    if (hitIdx !== null || draggedMarkerIdx !== null) {
+      timelineWrapper.style.cursor = 'ew-resize';
+      hoveredMarkerIdx = (draggedMarkerIdx !== null) ? draggedMarkerIdx : hitIdx;
+    } else {
+      timelineWrapper.style.cursor = 'pointer';
+      hoveredMarkerIdx = null;
+    }
+  }
+
+  if (draggedTrimHandle !== null && video.duration) {
+    const mouseX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const newTime = (mouseX / rect.width) * video.duration;
+
+    if (draggedTrimHandle === 'start') {
+      trimStartSec = Math.max(0, Math.min(newTime, trimEndSec - 0.1));
+    } else if (draggedTrimHandle === 'end') {
+      trimEndSec = Math.max(trimStartSec + 0.1, Math.min(newTime, video.duration));
+    }
+
+    updateTrimButtonState();
+    drawTimeline();
+  } else if (draggedMarkerIdx !== null && video.duration) {
+    const mouseX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const newTimeMs = Math.round((mouseX / rect.width) * video.duration * 1000);
+
+    currentState.markers[draggedMarkerIdx] = newTimeMs;
+    currentState.markers.sort((a, b) => a - b);
+    draggedMarkerIdx = currentState.markers.indexOf(newTimeMs);
+
+    renderWords();
+    updateOutput();
+    drawTimeline();
+  } else if (isScrubbing) {
+    seekToMouse(e);
+  }
+});
+
+window.addEventListener('mouseup', stopAllDragging);
+window.addEventListener('blur', stopAllDragging);
+window.addEventListener('mouseleave', (e) => {
+  if (e.target === document.documentElement) {
+    stopAllDragging();
+  }
+});
+
+function seekToMouse(e) {
+  if (!video.duration) return;
+  const rect = timelineWrapper.getBoundingClientRect();
+  const clickX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+  video.currentTime = (clickX / rect.width) * video.duration;
+}
+
+function addMarkerAtCurrentTime() {
+  if (currentState.markers.length >= words.length) return;
+
+  const currentMs = Math.round(video.currentTime * 1000);
+  const nextState = JSON.parse(JSON.stringify(currentState));
+  nextState.markers.push(currentMs);
+  nextState.markers.sort((a, b) => a - b);
+
+  pushState(nextState);
+}
+
+sentenceInput.addEventListener('input', handleSentenceChange);
+sentenceInput.addEventListener('change', handleSentenceChange);
+
+function handleSentenceChange() {
+  const newText = sentenceInput.value.trim();
+  if (newText !== currentState.sentence) {
+    pushState({
+      sentence: newText,
+      markers: currentState.markers
+    });
+  }
+}
+
+outputTimings.addEventListener('blur', parseTimingsFromInput);
+outputTimings.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    outputTimings.blur();
+  }
+});
+
+function parseTimingsFromInput() {
+  const inputVal = outputTimings.value.trim();
+  if (!inputVal) return;
+
+  const intervals = inputVal.split(',').map(v => parseInt(v.trim(), 10)).filter(n => !isNaN(n));
+  if (intervals.length === 0) return;
+
+  let cumulativeMs = 0;
+  const newMarkers = [];
+  for (let i = 0; i < intervals.length; i++) {
+    cumulativeMs += intervals[i];
+    newMarkers.push(cumulativeMs);
+  }
+
+  pushState({
+    sentence: currentState.sentence,
+    markers: newMarkers
+  });
+}
+
+window.addEventListener('keydown', (e) => {
+  if (document.activeElement === sentenceInput || document.activeElement === outputTimings) return;
+
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    if (e.shiftKey) {
+      redo();
+    } else {
+      undo();
+    }
+  } else if (e.code === 'KeyA') {
+    e.preventDefault();
+    addMarkerAtCurrentTime();
+  } else if (e.code === 'Space') {
+    e.preventDefault();
+    togglePlay();
+  }
+});
+
+function togglePlay() {
+  if (video.paused) {
+    video.play();
+  } else {
+    video.pause();
+  }
+}
+
+btnPlay.addEventListener('click', togglePlay);
+
+function calculateIntervals(markers) {
+  if (!markers || markers.length === 0) return '0';
+  return markers.map((ms, idx) => {
+    if (idx === 0) return ms;
+    return Math.max(0, ms - markers[idx - 1]);
+  }).join(', ');
+}
+
+function updateOutput() {
+  outputTimings.value = calculateIntervals(currentState.markers);
+}
+
+function renderWords() {
+  wordsContainer.innerHTML = '';
+  words.forEach((word, idx) => {
+    const chip = document.createElement('div');
+    let className = 'word-chip';
+    if (currentState.markers[idx] !== undefined) className += ' marked';
+
+    chip.className = className;
+    chip.innerHTML = `
+      <span>${word}</span>
+      ${currentState.markers[idx] !== undefined ? `<span class="time-tag">${(currentState.markers[idx] / 1000).toFixed(2)}s</span>` : ''}
+    `;
+
+    chip.addEventListener('click', () => {
+      if (currentState.markers[idx] !== undefined) {
+        video.currentTime = currentState.markers[idx] / 1000;
+      }
+    });
+
+    chip.addEventListener('mouseenter', () => {
+      hoveredWordIdx = idx;
+      drawTimeline();
+    });
+
+    chip.addEventListener('mouseleave', () => {
+      hoveredWordIdx = null;
+      drawTimeline();
+    });
+
+    wordsContainer.appendChild(chip);
+  });
+}
+
+btnCopy.addEventListener('click', () => {
+  navigator.clipboard.writeText(outputTimings.value).then(() => {
+    toast.textContent = 'Copied to Clipboard!';
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  });
+});
+
+pushState({
+  sentence: sentenceInput.value.trim(),
+  markers: []
+});
+resizeCanvas();
+  </script>
+</body>
+</html>

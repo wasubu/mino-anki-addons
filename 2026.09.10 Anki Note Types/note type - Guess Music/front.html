@@ -1,0 +1,57 @@
+<!-- front.html - do not delete or modify this line - v0.1 -->
+ <div class="video-wrapper" onclick="replayVideo()">
+  <video id="card-video" src="{{Video}}" autoplay playsinline preload="auto"></video>
+  <div class="video-overlay">
+    <div class="video-overlay-icon">
+      <svg width="60" height="60" viewBox="0 0 24 24">
+        <path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.252 4v5H9M5.07 8a8 8 0 1 1-.818 6"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div id="hidden-timing" style="display:none;">{{Timings}}</div>
+
+<script>
+(function() {
+  var vid = document.getElementById('card-video');
+  var timingElem = document.getElementById('hidden-timing');
+  var timingRaw = timingElem ? timingElem.innerText.trim() : '';
+  
+  // Parse timing: first value is front start time (e.g., 12.5)
+  var parts = timingRaw.split(',').map(function(s) { return parseFloat(s.trim()) || 0; });
+  var startTime = parts[0] || 0;
+  var duration = 5; // Play for 5 seconds
+
+  function checkTime() {
+    if (vid.currentTime >= startTime + duration) {
+      vid.pause();
+      vid.removeEventListener('timeupdate', checkTime);
+    }
+  }
+
+  window.replayVideo = function() {
+    if (!vid) return;
+    vid.removeEventListener('timeupdate', checkTime);
+    vid.currentTime = startTime;
+    vid.muted = false;
+    
+    var playPromise = vid.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(function(e) { console.log("Autoplay prevented:", e); });
+    }
+    vid.addEventListener('timeupdate', checkTime);
+  };
+
+  // Ensure metadata is loaded before seeking
+  if (vid) {
+    if (vid.readyState >= 1) {
+      window.replayVideo();
+    } else {
+      vid.addEventListener('loadedmetadata', function() {
+        window.replayVideo();
+      }, { once: true });
+    }
+  }
+})();
+</script>
