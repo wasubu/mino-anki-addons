@@ -1,93 +1,323 @@
-<!-- timingMaker.html - do not delete this line nor modify. v10 -->
+<!-- timingMaker.html - v1.1 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-  <title>Anki Timing Generator v6</title>
+  <title>Anki Song Card Generator</title>
 
-  <!-- 1. Load coi-serviceworker FIRST before any script using SharedArrayBuffer -->
+  <!-- 1. Load coi-serviceworker FIRST for SharedArrayBuffer support -->
   <script src="https://unpkg.com/coi-serviceworker/coi-serviceworker.min.js"></script>
 
-  <!-- 2. FFmpeg and styles -->
+  <!-- 2. FFmpeg & Styles -->
   <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
-  <link rel="stylesheet" href="style.css">
   <style>
-    /* Style for Download WebM Button Active Blue State */
+    :root {
+      --bg-dark: #121418;
+      --card-bg: #1a1d24;
+      --card-border: #2a2f3d;
+      --text-main: #e2e8f0;
+      --text-muted: #8a94a6;
+      --primary-blue: #0066ff;
+      --accent-purple: #8b5cf6;
+      --accent-green: #2ed573;
+      --accent-red: #ff4757;
+      --accent-cyan: #00f2fe;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      padding: 16px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    h1 { font-size: 1.25rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+
+    .btn-group { display: flex; gap: 10px; align-items: center; }
+
+    .btn {
+      background-color: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover { background-color: #242936; border-color: #3f475d; }
+
+    .btn-primary { background-color: var(--primary-blue); color: #fff; border-color: var(--primary-blue); }
+    .btn-primary:hover { background-color: #0052cc; }
+
     .btn-download-webm {
       background-color: #2a2f3d;
       color: #8a94a6;
       border: 1px solid #3a4154;
       cursor: not-allowed;
-      transition: all 0.3s ease;
       opacity: 0.6;
     }
 
-    .btn-download-webm.blue-active {
-      background-color: #0066ff !important;
+    .btn-download-webm.active-blue {
+      background-color: var(--primary-blue) !important;
       color: #ffffff !important;
       border-color: #0052cc !important;
       opacity: 1 !important;
       cursor: pointer !important;
-      box-shadow: 0 0 12px rgba(0, 102, 255, 0.6);
+      box-shadow: 0 0 12px rgba(0, 102, 255, 0.5);
     }
 
-    .btn-download-webm.blue-active:hover {
-      background-color: #0052cc !important;
-      box-shadow: 0 0 16px rgba(0, 102, 255, 0.8);
-    }
-
-    /* Style for Apply Trim Purple Active State */
-    .btn-download-webm.purple-active {
-      background-color: #8b5cf6 !important;
+    .btn-download-webm.active-purple {
+      background-color: var(--accent-purple) !important;
       color: #ffffff !important;
       border-color: #7c3aed !important;
       opacity: 1 !important;
       cursor: pointer !important;
-      box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
+      box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
     }
 
-    .btn-download-webm.purple-active:hover {
-      background-color: #7c3aed !important;
-      box-shadow: 0 0 16px rgba(139, 92, 246, 0.8);
+    .file-upload-btn {
+      background-color: #2f3545;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #454f68;
+    }
+    .file-upload-btn input { display: none; }
+
+    /* App Layout Grid */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
     }
 
-    .btn-revert-trim {
-      background-color: #3a4154;
-      color: #ffffff;
-      border: 1px solid #4f5870;
-      transition: all 0.2s ease;
+    .col-span-2 { grid-column: span 2; }
+
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 16px;
     }
 
-    .btn-revert-trim:hover {
-      background-color: #4f5870;
+    .video-container {
+      width: 100%;
+      background-color: #000;
+      border-radius: 6px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    video { width: 100%; height: 100%; object-fit: contain; }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
     }
 
     .select-speed {
-      background-color: #1a1d24;
-      color: #ffffff;
-      border: 1px solid #2f3542;
+      background-color: #121418;
+      color: #fff;
+      border: 1px solid var(--card-border);
       border-radius: 6px;
       padding: 6px 10px;
       font-size: 0.85rem;
       cursor: pointer;
     }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    .input-text {
+      width: 100%;
+      background-color: #121418;
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.95rem;
+    }
+
+    .input-text:focus { border-color: var(--primary-blue); outline: none; }
+
+    .timing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .marker-card {
+      background-color: #121418;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .marker-card.front { border-left: 4px solid var(--accent-green); }
+    .marker-card.back { border-left: 4px solid var(--accent-purple); }
+
+    .marker-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-weight: bold;
+      font-size: 0.85rem;
+    }
+
+    .marker-card input {
+      width: 100%;
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      margin-bottom: 8px;
+    }
+
+    /* Cut Controls Panel */
+    .cut-panel {
+      background-color: #121418;
+      border: 1px dashed #ff4757;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+
+    .cut-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--accent-red);
+      font-weight: bold;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+
+    .cut-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* Timeline Canvas */
+    .timeline-wrapper {
+      position: relative;
+      width: 100%;
+      height: 120px;
+      background-color: #0a0c10;
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    canvas { width: 100%; height: 100%; display: block; }
+
+    .hotkey-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 10px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .hotkey-legend span kbd {
+      background-color: #2a2f3d;
+      color: #fff;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: var(--accent-green);
+      color: #000;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-weight: bold;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Drag Overlay */
+    .drop-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: rgba(0, 102, 255, 0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .drop-overlay.active { opacity: 1; pointer-events: all; }
+    .drop-message { text-align: center; }
+    .drop-message h2 { font-size: 2rem; margin-bottom: 8px; }
   </style>
 </head>
 <body>
 
-  <!-- FULLSCREEN DRAG & DROP OVERLAY -->
+  <!-- Fullscreen Drag & Drop Overlay -->
   <div class="drop-overlay" id="drop-overlay">
     <div class="drop-message">
-      <div class="drop-icon">🎬</div>
-      <h2>Drop the vids here!</h2>
-      <p>Release to automatically load video or audio</p>
+      <div style="font-size: 3rem;">🎵</div>
+      <h2>Drop Video / Audio Here</h2>
+      <p>Release to load media file</p>
     </div>
   </div>
 
-  <header style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px;">
-    <h1>🎬 Anki Timing Generator v6</h1>
-    <div style="display: flex; gap: 10px; align-items: center;">
-      <button class="btn btn-revert-trim" id="btn-revert-trim" style="display: none;">🔄 Revert Trim</button>
+  <header>
+    <h1>🎵 Anki Song Card Generator</h1>
+    <div class="btn-group">
+      <button class="btn" id="btn-revert-trim" style="display: none;">🔄 Revert Trim & Cut</button>
       <button class="btn btn-download-webm" id="btn-download-webm" disabled>⬇️ Download WebM</button>
       <label class="file-upload-btn">
         📁 Load Media File
@@ -97,89 +327,101 @@
   </header>
 
   <div class="app-layout">
-    
-    <!-- LEFT COLUMN: Video Preview matching Right Column Height -->
-    <div class="col-left">
-      <div class="card video-card">
-        <div class="video-container">
-          <video id="video-preview" playsinline></video>
-        </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-          <button class="btn" id="btn-play">▶ Play / Pause</button>
-          
-          <select id="playback-speed" class="select-speed" title="Playback Speed">
-            <option value="0.5">0.5x</option>
-            <option value="0.75">0.75x</option>
-            <option value="1" selected>1.0x</option>
-            <option value="1.25">1.25x</option>
-            <option value="1.5">1.5x</option>
-            <option value="2">2.0x</option>
-          </select>
+    <!-- LEFT COLUMN: Video Player & Quick Preview -->
+    <div class="card">
+      <div class="video-container">
+        <video id="video-preview" playsinline></video>
+      </div>
 
-          <span id="file-name" style="font-size: 0.85rem; color: var(--text-muted); flex-grow: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">No file loaded</span>
-        </div>
+      <div class="control-row">
+        <button class="btn btn-primary" id="btn-play">▶ Play / Pause</button>
+        <select id="playback-speed" class="select-speed">
+          <option value="0.5">0.5x</option>
+          <option value="0.75">0.75x</option>
+          <option value="1" selected>1.0x</option>
+          <option value="1.25">1.25x</option>
+          <option value="1.5">1.5x</option>
+          <option value="2">2.0x</option>
+        </select>
+        <span id="file-name" style="font-size: 0.8rem; color: var(--text-muted); flex-grow: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">No file loaded</span>
+      </div>
+
+      <div class="control-row" style="margin-bottom: 0;">
+        <button class="btn" id="btn-preview-front" style="flex: 1; border-color: var(--accent-green); color: var(--accent-green);">▶ Preview Front (5s)</button>
+        <button class="btn" id="btn-preview-back" style="flex: 1; border-color: var(--accent-purple); color: var(--accent-purple);">▶ Preview Back (5s)</button>
       </div>
     </div>
 
-    <!-- RIGHT COLUMN: Sentence, Stats, Word Chips, Timings Output -->
-    <div class="col-right">
-      <div class="card">
+    <!-- RIGHT COLUMN: Timing Markers & Middle Cut Controls -->
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      
+      <div>
         <div class="form-group">
-          <label for="sentence-input">Sentence Text</label>
-          <input type="text" id="sentence-input" value="You live to see this world crumble to dust and blow away.">
-        </div>
-
-        <!-- Live Stats Box -->
-        <div class="stats-container">
-          <div class="stat-box">
-            <span class="stat-title">Word Count</span>
-            <span class="stat-value" id="stat-word-count">0</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-title">Dummy Count</span>
-            <span class="stat-value" id="stat-dummy-count">0</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-title">LAST WORDS PUT</span>
-            <span class="stat-value" id="stat-put-last-word">0</span>
+          <label>Generated {{Timing}} Output</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" class="input-text" id="output-timing" value="0, 0">
+            <button class="btn btn-primary" id="btn-copy">📋 Copy</button>
           </div>
         </div>
 
-        <div class="form-group" style="margin-bottom: 0;">
-          <label>Word Timing Progress</label>
-          <div class="words-container" id="words-container"></div>
+        <!-- Front and Back Clip Timings -->
+        <div class="timing-grid">
+          <div class="marker-card front">
+            <div class="marker-card-header">
+              <span style="color: var(--accent-green);">🟢 Front Clip Start</span>
+              <button class="btn" id="btn-set-front" style="padding: 2px 6px; font-size: 0.75rem;">Set Current</button>
+            </div>
+            <input type="number" id="front-time-input" step="0.1" value="0.0">
+          </div>
+
+          <div class="marker-card back">
+            <div class="marker-card-header">
+              <span style="color: var(--accent-purple);">🟣 Back Clip Start</span>
+              <button class="btn" id="btn-set-back" style="padding: 2px 6px; font-size: 0.75rem;">Set Current</button>
+            </div>
+            <input type="number" id="back-time-input" step="0.1" value="0.0">
+          </div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="flex-row" style="justify-content: space-between; margin-bottom: 8px;">
-          <label for="output-timings">Generated {{Timings}} String</label>
-          <button class="btn btn-primary" id="btn-copy">📋 Copy {{Timings}}</button>
+      <!-- Middle Cut Box -->
+      <div class="cut-panel">
+        <div class="cut-header">
+          <span>✂️ Cut Out Middle Region</span>
+          <label style="font-size: 0.8rem; cursor: pointer; color: #fff;">
+            <input type="checkbox" id="enable-middle-cut"> Enable Cut
+          </label>
         </div>
-        <input type="text" class="output-box" id="output-timings" value="0">
-        <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">Edit values directly and press Enter or exit box to update timeline.</span>
+        <div class="cut-grid">
+          <div>
+            <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Cut Start (sec)</label>
+            <input type="number" id="cut-start-input" class="input-text" step="0.1" value="0.0" disabled>
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Cut End (sec)</label>
+            <input type="number" id="cut-end-input" class="input-text" step="0.1" value="0.0" disabled>
+          </div>
+        </div>
       </div>
+
     </div>
 
-    <!-- SPANNING TWO COLUMNS: Audio Waveform & Draggable Timeline -->
-    <div class="col-timeline">
-      <div class="card" style="padding: 14px;">
-        <label style="margin-bottom: 8px; display: block;">Audio Waveform & Markers Timeline</label>
-        
-        <div class="timeline-wrapper" id="timeline-wrapper">
-          <canvas id="waveform-canvas"></canvas>
-        </div>
+    <!-- SPANNING TIMELINE CANVAS -->
+    <div class="col-span-2 card" style="padding: 14px;">
+      <label style="margin-bottom: 8px; display: block; font-size: 0.8rem; font-weight: bold; color: var(--text-muted);">AUDIO WAVEFORM & EDITING TIMELINE</label>
 
-        <div class="hotkey-legend">
-          <span><kbd>Space</kbd> Play / Pause</span>
-          <span><kbd>A</kbd> Add Marker</span>
-          <span><kbd>Drag House Handle</kbd> Reposition</span>
-          <span><kbd>Dbl-Click House</kbd> Delete Marker</span>
-          <span><kbd>Drag Side Handles</kbd> Trim Video</span>
-          <span><kbd>Click Waveform</kbd> Seek Video</span>
-          <span><kbd>Ctrl + Z</kbd> Undo / Revert</span>
-        </div>
+      <div class="timeline-wrapper" id="timeline-wrapper">
+        <canvas id="waveform-canvas"></canvas>
+      </div>
+
+      <div class="hotkey-legend">
+        <span><kbd>Space</kbd> Play/Pause</span>
+        <span><kbd>1</kbd> Set Front Start</span>
+        <span><kbd>2</kbd> Set Back Start</span>
+        <span><kbd>Drag Side Handles</kbd> Trim Outer Video</span>
+        <span><kbd>Drag Red Handles</kbd> Adjust Middle Cut</span>
+        <span><kbd>Click Timeline</kbd> Seek Playhead</span>
       </div>
     </div>
 
@@ -188,891 +430,640 @@
   <div class="toast" id="toast">Copied to Clipboard!</div>
 
   <script>
-// --- State & History Engine (Ctrl+Z Support) ---
-let historyStack = [];
-let historyIndex = -1;
+    // State
+    let originalMediaFile = null;
+    let audioBuffer = null;
+    let originalAudioBuffer = null;
+    let cumulativeOffsetMs = 0;
 
-let currentState = {
-  sentence: "",
-  markers: [] // Absolute timestamps in milliseconds
-};
+    // Timings
+    let frontStartSec = 0;
+    let backStartSec = 0;
 
-let words = [];
-let audioBuffer = null;
-let originalAudioBuffer = null;
-let cumulativeTrimOffsetMs = 0;
-let draggedMarkerIdx = null;
-let isScrubbing = false;
-let hoveredMarkerIdx = null;
-let hoveredWordIdx = null;
-let dragCounter = 0;
+    // Trim & Cut State
+    let trimStartSec = 0;
+    let trimEndSec = 0;
+    let enableMiddleCut = false;
+    let cutStartSec = 0;
+    let cutEndSec = 0;
 
-// --- Video Trimming & Original Master Copy State ---
-let originalMediaFile = null;
-let trimStartSec = 0;
-let trimEndSec = 0;
-let lastAppliedTrimStart = 0;
-let lastAppliedTrimEnd = 0;
-let draggedTrimHandle = null; // 'start' | 'end' | null
-let hoveredTrimHandle = null; // 'start' | 'end' | null
+    let lastAppliedTrimStart = 0;
+    let lastAppliedTrimEnd = 0;
 
-// FFmpeg Conversion State & Logger
-let ffmpeg = null;
-let ffmpegLogs = [];
-let convertedWebmBlobUrl = null;
-let convertedFileName = '';
+    // Interaction & Dragging state
+    let draggedHandle = null; // 'trimStart' | 'trimEnd' | 'cutStart' | 'cutEnd' | 'front' | 'back'
+    let hoveredHandle = null;
+    let isScrubbing = false;
+    let dragCounter = 0;
 
-// Elements
-const sentenceInput = document.getElementById('sentence-input');
-const mediaFileInput = document.getElementById('media-file');
-const fileNameDisplay = document.getElementById('file-name');
-const video = document.getElementById('video-preview');
-const canvas = document.getElementById('waveform-canvas');
-const ctx = canvas.getContext('2d');
-const timelineWrapper = document.getElementById('timeline-wrapper');
-const wordsContainer = document.getElementById('words-container');
-const outputTimings = document.getElementById('output-timings');
-const btnPlay = document.getElementById('btn-play');
-const playbackSpeedSelect = document.getElementById('playback-speed');
-const btnCopy = document.getElementById('btn-copy');
-const btnDownloadWebm = document.getElementById('btn-download-webm');
-const btnRevertTrim = document.getElementById('btn-revert-trim');
-const toast = document.getElementById('toast');
-const dropOverlay = document.getElementById('drop-overlay');
-const statWordCount = document.getElementById('stat-word-count');
-const statDummyCount = document.getElementById('stat-dummy-count');
-const statPutLastWord = document.getElementById('stat-put-last-word');
+    // FFmpeg state
+    let ffmpeg = null;
+    let ffmpegLogs = [];
+    let convertedWebmBlobUrl = null;
+    let convertedFileName = '';
 
-// --- Playback Speed Control ---
-playbackSpeedSelect.addEventListener('change', () => {
-  video.playbackRate = parseFloat(playbackSpeedSelect.value);
-});
-
-video.addEventListener('loadeddata', () => {
-  video.playbackRate = parseFloat(playbackSpeedSelect.value);
-});
-
-// --- Check if Trim State is Modified ---
-function isTrimChanged() {
-  if (!video.duration) return false;
-  return (
-    Math.abs(trimStartSec - lastAppliedTrimStart) > 0.05 ||
-    Math.abs(trimEndSec - lastAppliedTrimEnd) > 0.05
-  );
-}
-
-// --- Dynamic Button State Update ---
-function updateTrimButtonState() {
-  if (!originalMediaFile) {
-    btnDownloadWebm.disabled = true;
-    btnDownloadWebm.classList.remove('blue-active', 'purple-active');
-    btnDownloadWebm.textContent = '⬇️ Download WebM';
-    btnRevertTrim.style.display = 'none';
-    return;
-  }
-
-  if (cumulativeTrimOffsetMs > 0 || isTrimChanged() || convertedWebmBlobUrl) {
-    btnRevertTrim.style.display = 'inline-block';
-  } else {
-    btnRevertTrim.style.display = 'none';
-  }
-
-  if (isTrimChanged()) {
-    btnDownloadWebm.disabled = false;
-    btnDownloadWebm.classList.remove('blue-active');
-    btnDownloadWebm.classList.add('purple-active');
-    btnDownloadWebm.textContent = '✂️ Apply Trim';
-  } else if (convertedWebmBlobUrl || originalMediaFile.name.toLowerCase().endsWith('.webm')) {
-    btnDownloadWebm.disabled = false;
-    btnDownloadWebm.classList.remove('purple-active');
-    btnDownloadWebm.classList.add('blue-active');
-    btnDownloadWebm.textContent = '⬇️ Download WebM';
-  }
-}
-
-// --- State Stack Management ---
-function pushState(newState) {
-  historyStack = historyStack.slice(0, historyIndex + 1);
-  const stateCopy = JSON.parse(JSON.stringify(newState));
-  historyStack.push(stateCopy);
-  historyIndex = historyStack.length - 1;
-  applyState(stateCopy);
-}
-
-function undo() {
-  if (historyIndex > 0) {
-    historyIndex--;
-    applyState(historyStack[historyIndex]);
-  }
-}
-
-function redo() {
-  if (historyIndex < historyStack.length - 1) {
-    historyIndex++;
-    applyState(historyStack[historyIndex]);
-  }
-}
-
-function applyState(state) {
-  currentState = JSON.parse(JSON.stringify(state));
-  if (sentenceInput.value !== currentState.sentence) {
-    sentenceInput.value = currentState.sentence;
-  }
-  words = currentState.sentence ? currentState.sentence.split(/\s+/).filter(Boolean) : [];
-  
-  updateStats();
-  renderWords();
-  
-  if (document.activeElement !== outputTimings) {
-    updateOutput();
-  }
-  drawTimeline();
-}
-
-// --- Calculate & Update Statistics ---
-function updateStats() {
-  const wordCount = words.length;
-  statWordCount.textContent = wordCount;
-
-  if (wordCount === 0) {
-    statDummyCount.textContent = 0;
-    statPutLastWord.textContent = 0;
-    return;
-  }
-
-  const dummyCount = (wordCount <= 5) ? 2 : 1;
-  statDummyCount.textContent = dummyCount;
-
-  let putLastWord = 0;
-  if (wordCount >= 13) {
-    putLastWord = 2;
-  } else if (wordCount >= 6) {
-    putLastWord = 1;
-  } else {
-    putLastWord = 0;
-  }
-  statPutLastWord.textContent = putLastWord;
-}
-
-// --- Resize Canvas ---
-function resizeCanvas() {
-  canvas.width = timelineWrapper.clientWidth * window.devicePixelRatio;
-  canvas.height = timelineWrapper.clientHeight * window.devicePixelRatio;
-  drawTimeline();
-}
-window.addEventListener('resize', resizeCanvas);
-
-// --- Reset Download Button State ---
-function resetDownloadButton() {
-  if (convertedWebmBlobUrl) {
-    URL.revokeObjectURL(convertedWebmBlobUrl);
-    convertedWebmBlobUrl = null;
-  }
-  convertedFileName = '';
-  ffmpegLogs = [];
-  updateTrimButtonState();
-}
-
-// --- FFmpeg In-Browser Conversion & Trim Function ---
-async function processMediaWithFFmpeg() {
-  if (!originalMediaFile) return;
-
-  const file = originalMediaFile;
-  const extension = file.name.split('.').pop().toLowerCase();
-  const currentTrimStart = trimStartSec;
-  const currentTrimEnd = trimEndSec;
-
-  btnDownloadWebm.disabled = true;
-  btnDownloadWebm.textContent = '⏳ Loading FFmpeg...';
-
-  try {
-    const { createFFmpeg, fetchFile } = FFmpeg;
-    if (!ffmpeg) {
-      ffmpeg = createFFmpeg({
-        log: true,
-        logger: ({ message }) => {
-          console.log(message);
-          ffmpegLogs.push(message);
-        }
-      });
-    }
-
-    if (!ffmpeg.isLoaded()) {
-      await ffmpeg.load();
-    }
-
-    ffmpeg.setProgress(({ ratio }) => {
-      const pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
-      btnDownloadWebm.textContent = isTrimChanged() ? `⏳ Trimming (${pct}%)...` : `⏳ Converting (${pct}%)...`;
-    });
-
-    const inputName = `input_${Date.now()}.${extension}`;
-    const outputName = `output_${Date.now()}.webm`;
-
-    ffmpeg.FS('writeFile', inputName, await fetchFile(file));
-
-    const ffmpegArgs = [];
+    // DOM Elements
+    const mediaFileInput = document.getElementById('media-file');
+    const fileNameDisplay = document.getElementById('file-name');
+    const video = document.getElementById('video-preview');
+    const canvas = document.getElementById('waveform-canvas');
+    const ctx = canvas.getContext('2d');
+    const timelineWrapper = document.getElementById('timeline-wrapper');
     
-    // Fast Input Seeking
-    if (trimStartSec > 0 || (video.duration && trimEndSec < video.duration)) {
-      ffmpegArgs.push('-ss', trimStartSec.toFixed(3));
-      ffmpegArgs.push('-to', trimEndSec.toFixed(3));
+    const outputTiming = document.getElementById('output-timing');
+    const frontTimeInput = document.getElementById('front-time-input');
+    const backTimeInput = document.getElementById('back-time-input');
+    
+    const enableCutCheckbox = document.getElementById('enable-middle-cut');
+    const cutStartInput = document.getElementById('cut-start-input');
+    const cutEndInput = document.getElementById('cut-end-input');
+
+    const btnPlay = document.getElementById('btn-play');
+    const playbackSpeedSelect = document.getElementById('playback-speed');
+    const btnCopy = document.getElementById('btn-copy');
+    const btnDownloadWebm = document.getElementById('btn-download-webm');
+    const btnRevertTrim = document.getElementById('btn-revert-trim');
+    const btnSetFront = document.getElementById('btn-set-front');
+    const btnSetBack = document.getElementById('btn-set-back');
+    const btnPreviewFront = document.getElementById('btn-preview-front');
+    const btnPreviewBack = document.getElementById('btn-preview-back');
+    const toast = document.getElementById('toast');
+    const dropOverlay = document.getElementById('drop-overlay');
+
+    // Controls Initialization
+    playbackSpeedSelect.addEventListener('change', () => video.playbackRate = parseFloat(playbackSpeedSelect.value));
+    video.addEventListener('loadeddata', () => video.playbackRate = parseFloat(playbackSpeedSelect.value));
+
+    function updateTimingString() {
+      const f = parseFloat(frontStartSec.toFixed(2));
+      const b = parseFloat(backStartSec.toFixed(2));
+      outputTiming.value = `${f}, ${b}`;
     }
 
-    ffmpegArgs.push(
-      '-i', inputName,
-      '-vf', 'scale=-2:min(720\\,ih)',
-      '-c:v', 'libvpx-vp9',
-      '-deadline', 'realtime',
-      '-cpu-used', '8',
-      '-crf', '32',
-      '-b:v', '0',
-      '-pix_fmt', 'yuv420p',
-      '-af', 'loudnorm=I=-14:TP=-1.0:LRA=11',
-      '-c:a', 'libopus',
-      '-b:a', '96k',
-      '-y', outputName
-    );
-
-    await ffmpeg.run(...ffmpegArgs);
-
-    const data = ffmpeg.FS('readFile', outputName);
-    const blob = new Blob([data.buffer], { type: 'video/webm' });
-
-    if (convertedWebmBlobUrl) {
-      URL.revokeObjectURL(convertedWebmBlobUrl);
-    }
-    convertedWebmBlobUrl = URL.createObjectURL(blob);
-
-    const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-    convertedFileName = `${baseName}_anki.webm`;
-
-    ffmpeg.FS('unlink', inputName);
-    ffmpeg.FS('unlink', outputName);
-
-    // Shift existing markers to match new video timeline
-    const trimShiftMs = Math.round(currentTrimStart * 1000);
-    const newDurationMs = Math.round((currentTrimEnd - currentTrimStart) * 1000);
-
-    cumulativeTrimOffsetMs += trimShiftMs;
-
-    const shiftedMarkers = currentState.markers
-      .map(m => m - trimShiftMs)
-      .filter(m => m >= 0 && m <= newDurationMs);
-
-    pushState({
-      sentence: currentState.sentence,
-      markers: shiftedMarkers
-    });
-
-    // Re-decode audio waveform for the trimmed clip
-    try {
-      const blobBuffer = await blob.arrayBuffer();
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      audioBuffer = await audioCtx.decodeAudioData(blobBuffer);
-    } catch (err) {
-      console.warn('Trimmed audio waveform decode failed:', err);
+    function isTrimOrCutModified() {
+      if (!video.duration) return false;
+      const trimChanged = Math.abs(trimStartSec - lastAppliedTrimStart) > 0.05 || Math.abs(trimEndSec - lastAppliedTrimEnd) > 0.05;
+      const cutChanged = enableMiddleCut && (cutEndSec > cutStartSec);
+      return trimChanged || cutChanged;
     }
 
-    lastAppliedTrimStart = 0;
-    lastAppliedTrimEnd = 0;
-    trimStartSec = 0;
-    trimEndSec = 0;
-
-    updateTrimButtonState();
-    video.src = convertedWebmBlobUrl;
-
-  } catch (err) {
-    console.error('FFmpeg web processing failed:', err);
-    ffmpegLogs.push(`JS Exception: ${err.message || err}`);
-    btnDownloadWebm.disabled = false;
-    btnDownloadWebm.classList.remove('purple-active');
-    btnDownloadWebm.classList.add('blue-active');
-    btnDownloadWebm.textContent = '❌ Processing Failed (Click for Logs)';
-  }
-}
-
-// --- Download / Trim Button Click Listener ---
-btnDownloadWebm.addEventListener('click', () => {
-  if (isTrimChanged()) {
-    processMediaWithFFmpeg();
-  } else if (convertedWebmBlobUrl || (originalMediaFile && originalMediaFile.name.toLowerCase().endsWith('.webm'))) {
-    const downloadUrl = convertedWebmBlobUrl || video.src;
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = convertedFileName || originalMediaFile.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  } else if (ffmpegLogs.length > 0) {
-    const logOutput = ffmpegLogs.join('\n');
-    navigator.clipboard.writeText(logOutput).then(() => {
-      toast.textContent = 'Logs copied to Clipboard!';
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2000);
-    });
-  }
-});
-
-// --- Revert Trim Click Listener ---
-btnRevertTrim.addEventListener('click', () => {
-  if (!originalMediaFile) return;
-
-  if (convertedWebmBlobUrl) {
-    URL.revokeObjectURL(convertedWebmBlobUrl);
-    convertedWebmBlobUrl = null;
-  }
-
-  video.src = URL.createObjectURL(originalMediaFile);
-  audioBuffer = originalAudioBuffer;
-
-  // Restore shifted markers back to original positions
-  if (cumulativeTrimOffsetMs > 0) {
-    const restoredMarkers = currentState.markers.map(m => m + cumulativeTrimOffsetMs);
-    pushState({
-      sentence: currentState.sentence,
-      markers: restoredMarkers
-    });
-    cumulativeTrimOffsetMs = 0;
-  }
-
-  trimStartSec = 0;
-  trimEndSec = video.duration || 0;
-  lastAppliedTrimStart = 0;
-  lastAppliedTrimEnd = video.duration || 0;
-
-  resetDownloadButton();
-  drawTimeline();
-});
-
-// --- Core Media Loader Function ---
-async function loadMediaFile(file) {
-  if (!file) return;
-
-  originalMediaFile = file;
-  cumulativeTrimOffsetMs = 0;
-  fileNameDisplay.textContent = file.name;
-  video.src = URL.createObjectURL(file);
-
-  trimStartSec = 0;
-  trimEndSec = 0;
-  lastAppliedTrimStart = 0;
-  lastAppliedTrimEnd = 0;
-
-  resetDownloadButton();
-
-  const extension = file.name.split('.').pop().toLowerCase();
-  if (extension !== 'webm') {
-    processMediaWithFFmpeg();
-  }
-
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-    originalAudioBuffer = audioBuffer;
-    drawTimeline();
-  } catch (err) {
-    console.warn('Audio waveform decode bypassed:', err);
-    audioBuffer = null;
-    originalAudioBuffer = null;
-    drawTimeline();
-  }
-}
-
-video.addEventListener('loadedmetadata', () => {
-  if (trimEndSec === 0 || trimEndSec > video.duration) {
-    trimEndSec = video.duration;
-    lastAppliedTrimEnd = video.duration;
-  }
-  drawTimeline();
-  updateTrimButtonState();
-});
-
-mediaFileInput.addEventListener('change', (e) => {
-  if (e.target.files && e.target.files[0]) {
-    loadMediaFile(e.target.files[0]);
-  }
-});
-
-// --- Drag and Drop Overlay ---
-window.addEventListener('dragenter', (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  dragCounter++;
-  
-  if (e.dataTransfer.types && (e.dataTransfer.types.includes('Files') || e.dataTransfer.types[0] === 'Files')) {
-    dropOverlay.classList.add('active');
-  }
-});
-
-window.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-});
-
-window.addEventListener('dragleave', (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  dragCounter--;
-  if (dragCounter <= 0) {
-    dragCounter = 0;
-    dropOverlay.classList.remove('active');
-  }
-});
-
-window.addEventListener('drop', (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  dragCounter = 0;
-  dropOverlay.classList.remove('active');
-
-  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-    loadMediaFile(e.dataTransfer.files[0]);
-  }
-});
-
-// --- Draw Markers, Waveform & Trim Handles ---
-function drawUpsideDownHouse(x, y, width, height, roofHeight, color, isHovered) {
-  const hw = width / 2;
-  ctx.beginPath();
-  ctx.moveTo(x - hw, y);
-  ctx.lineTo(x + hw, y);
-  ctx.lineTo(x + hw, y + height - roofHeight);
-  ctx.lineTo(x, y + height);
-  ctx.lineTo(x - hw, y + height - roofHeight);
-  ctx.closePath();
-
-  ctx.fillStyle = color;
-  ctx.fill();
-  ctx.strokeStyle = isHovered ? '#ffffff' : '#000000';
-  ctx.lineWidth = 1.5 * window.devicePixelRatio;
-  ctx.stroke();
-}
-
-function drawTrimHandles(duration, w, h, scale) {
-  if (!duration) return;
-
-  const startX = (trimStartSec / duration) * w;
-  const endX = (trimEndSec / duration) * w;
-
-  // Darken trimmed-out side regions
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-  if (startX > 0) ctx.fillRect(0, 0, startX, h);
-  if (endX < w) ctx.fillRect(endX, 0, w - endX, h);
-
-  const trimActive = isTrimChanged();
-  const handleColor = trimActive ? '#0066ff' : '#6c757d';
-  const handleWidth = 8 * scale;
-
-  // Left Trim Handle (Start)
-  ctx.fillStyle = (hoveredTrimHandle === 'start' || draggedTrimHandle === 'start') ? '#38ef7d' : handleColor;
-  ctx.fillRect(startX, 0, handleWidth, h);
-
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(startX + (2 * scale), (h / 2) - (10 * scale), 2 * scale, 20 * scale);
-  ctx.fillRect(startX + (5 * scale), (h / 2) - (10 * scale), 2 * scale, 20 * scale);
-
-  // Right Trim Handle (End)
-  ctx.fillStyle = (hoveredTrimHandle === 'end' || draggedTrimHandle === 'end') ? '#38ef7d' : handleColor;
-  ctx.fillRect(endX - handleWidth, 0, handleWidth, h);
-
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(endX - handleWidth + (1 * scale), (h / 2) - (10 * scale), 2 * scale, 20 * scale);
-  ctx.fillRect(endX - handleWidth + (4 * scale), (h / 2) - (10 * scale), 2 * scale, 20 * scale);
-}
-
-function drawTimeline() {
-  const w = canvas.width;
-  const h = canvas.height;
-  const scale = window.devicePixelRatio;
-  ctx.clearRect(0, 0, w, h);
-
-  ctx.fillStyle = '#0a0c10';
-  ctx.fillRect(0, 0, w, h);
-
-  const duration = video.duration || 1;
-
-  if (audioBuffer) {
-    const rawData = audioBuffer.getChannelData(0);
-    const step = Math.ceil(rawData.length / w);
-    const amp = h / 2;
-
-    ctx.fillStyle = '#262c3a';
-    ctx.beginPath();
-    for (let i = 0; i < w; i++) {
-      let min = 1.0, max = -1.0;
-      for (let j = 0; j < step; j++) {
-        const datum = rawData[(i * step) + j];
-        if (datum < min) min = datum;
-        if (datum > max) max = datum;
+    function updateTrimButtonState() {
+      if (!originalMediaFile) {
+        btnDownloadWebm.disabled = true;
+        btnDownloadWebm.classList.remove('active-blue', 'active-purple');
+        btnDownloadWebm.textContent = '⬇️ Download WebM';
+        btnRevertTrim.style.display = 'none';
+        return;
       }
-      ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
-    }
-  }
 
-  // Draw Trim Handles & Dimmed Out Bounds
-  drawTrimHandles(duration, w, h, scale);
-
-  // Draw Word Markers
-  currentState.markers.forEach((ms, idx) => {
-    const x = (ms / 1000 / duration) * w;
-    const isHovered = (hoveredMarkerIdx === idx || draggedMarkerIdx === idx || hoveredWordIdx === idx);
-
-    ctx.strokeStyle = isHovered ? '#ff6b81' : '#ff4757';
-    ctx.lineWidth = (isHovered ? 3 : 2) * scale;
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, h);
-    ctx.stroke();
-
-    const markerWidth = (isHovered ? 18 : 16) * scale;
-    const markerHeight = (isHovered ? 28 : 26) * scale;
-    const roofHeight = 10 * scale;
-    drawUpsideDownHouse(x, 2 * scale, markerWidth, markerHeight, roofHeight, isHovered ? '#ff6b81' : '#ff4757', isHovered);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `bold ${9.5 * scale}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText(idx + 1, x, 14 * scale);
-  });
-
-  // Draw Playhead
-  const curTime = video.currentTime || 0;
-  const playheadX = (curTime / duration) * w;
-
-  ctx.strokeStyle = '#00f2fe';
-  ctx.lineWidth = 2 * scale;
-  ctx.beginPath();
-  ctx.moveTo(playheadX, 0);
-  ctx.lineTo(playheadX, h);
-  ctx.stroke();
-
-  ctx.fillStyle = '#00f2fe';
-  ctx.beginPath();
-  ctx.arc(playheadX, 6 * scale, 5 * scale, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function animate() {
-  drawTimeline();
-  updateActiveWordHighlight();
-  requestAnimationFrame(animate);
-}
-requestAnimationFrame(animate);
-
-function updateActiveWordHighlight() {
-  if (!video || currentState.markers.length === 0) return;
-
-  const currentTimeMs = video.currentTime * 1000;
-  let activeIdx = -1;
-
-  for (let i = currentState.markers.length - 1; i >= 0; i--) {
-    if (currentTimeMs >= currentState.markers[i]) {
-      const nextTime = (i < currentState.markers.length - 1) ? currentState.markers[i + 1] : (currentState.markers[i] + 600);
-      if (currentTimeMs < nextTime) {
-        activeIdx = i;
+      if (isTrimOrCutModified() || convertedWebmBlobUrl) {
+        btnRevertTrim.style.display = 'inline-block';
+      } else {
+        btnRevertTrim.style.display = 'none';
       }
-      break;
-    }
-  }
 
-  const chips = wordsContainer.querySelectorAll('.word-chip');
-  chips.forEach((chip, idx) => {
-    if (idx === activeIdx) {
-      chip.classList.add('timing-active');
-    } else {
-      chip.classList.remove('timing-active');
-    }
-
-    if (hoveredMarkerIdx === idx || hoveredWordIdx === idx) {
-      chip.classList.add('hover-highlight');
-    } else {
-      chip.classList.remove('hover-highlight');
-    }
-  });
-}
-
-function getTrimHandleAtPos(clientX) {
-  if (!video.duration) return null;
-  const rect = timelineWrapper.getBoundingClientRect();
-  const clickX = clientX - rect.left;
-  const duration = video.duration;
-
-  const startX = (trimStartSec / duration) * rect.width;
-  const endX = (trimEndSec / duration) * rect.width;
-
-  if (Math.abs(clickX - startX) <= 12) return 'start';
-  if (Math.abs(clickX - endX) <= 12) return 'end';
-
-  return null;
-}
-
-function getHouseHandleIndexAtPos(clientX, clientY) {
-  if (!video.duration) return null;
-  const rect = timelineWrapper.getBoundingClientRect();
-  const clickX = clientX - rect.left;
-  const clickY = clientY - rect.top;
-  const duration = video.duration;
-
-  if (clickY < 0 || clickY > 28) return null;
-
-  for (let i = 0; i < currentState.markers.length; i++) {
-    const markerX = (currentState.markers[i] / 1000 / duration) * rect.width;
-    if (Math.abs(markerX - clickX) <= 10) {
-      return i;
-    }
-  }
-  return null;
-}
-
-timelineWrapper.addEventListener('mousedown', (e) => {
-  const trimHandle = getTrimHandleAtPos(e.clientX);
-  if (trimHandle !== null) {
-    draggedTrimHandle = trimHandle;
-    if (!video.paused) video.pause();
-    return;
-  }
-
-  const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
-  if (hitIdx !== null) {
-    draggedMarkerIdx = hitIdx;
-    if (!video.paused) video.pause();
-  } else {
-    isScrubbing = true;
-    seekToMouse(e);
-  }
-});
-
-// Double click marker to delete
-timelineWrapper.addEventListener('dblclick', (e) => {
-  const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
-  if (hitIdx !== null) {
-    stopAllDragging();
-    const nextState = JSON.parse(JSON.stringify(currentState));
-    nextState.markers.splice(hitIdx, 1);
-    pushState(nextState);
-  }
-});
-
-function stopAllDragging() {
-  if (draggedMarkerIdx !== null) {
-    pushState(currentState);
-    draggedMarkerIdx = null;
-  }
-  if (draggedTrimHandle !== null) {
-    draggedTrimHandle = null;
-    updateTrimButtonState();
-  }
-  isScrubbing = false;
-}
-
-window.addEventListener('mousemove', (e) => {
-  if (e.buttons === 0 && (isScrubbing || draggedMarkerIdx !== null || draggedTrimHandle !== null)) {
-    stopAllDragging();
-    return;
-  }
-
-  const rect = timelineWrapper.getBoundingClientRect();
-
-  const trimHandle = getTrimHandleAtPos(e.clientX);
-  hoveredTrimHandle = (draggedTrimHandle !== null) ? draggedTrimHandle : trimHandle;
-
-  if (hoveredTrimHandle !== null) {
-    timelineWrapper.style.cursor = 'ew-resize';
-  } else {
-    const hitIdx = getHouseHandleIndexAtPos(e.clientX, e.clientY);
-    if (hitIdx !== null || draggedMarkerIdx !== null) {
-      timelineWrapper.style.cursor = 'ew-resize';
-      hoveredMarkerIdx = (draggedMarkerIdx !== null) ? draggedMarkerIdx : hitIdx;
-    } else {
-      timelineWrapper.style.cursor = 'pointer';
-      hoveredMarkerIdx = null;
-    }
-  }
-
-  if (draggedTrimHandle !== null && video.duration) {
-    const mouseX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    const newTime = (mouseX / rect.width) * video.duration;
-
-    if (draggedTrimHandle === 'start') {
-      trimStartSec = Math.max(0, Math.min(newTime, trimEndSec - 0.1));
-    } else if (draggedTrimHandle === 'end') {
-      trimEndSec = Math.max(trimStartSec + 0.1, Math.min(newTime, video.duration));
+      if (isTrimOrCutModified()) {
+        btnDownloadWebm.disabled = false;
+        btnDownloadWebm.classList.remove('active-blue');
+        btnDownloadWebm.classList.add('active-purple');
+        btnDownloadWebm.textContent = '✂️ Process & Apply Trim/Cut';
+      } else if (convertedWebmBlobUrl || originalMediaFile.name.toLowerCase().endsWith('.webm')) {
+        btnDownloadWebm.disabled = false;
+        btnDownloadWebm.classList.remove('active-purple');
+        btnDownloadWebm.classList.add('active-blue');
+        btnDownloadWebm.textContent = '⬇️ Download WebM';
+      }
     }
 
-    updateTrimButtonState();
-    drawTimeline();
-  } else if (draggedMarkerIdx !== null && video.duration) {
-    const mouseX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    const newTimeMs = Math.round((mouseX / rect.width) * video.duration * 1000);
+    // Resize Canvas
+    function resizeCanvas() {
+      canvas.width = timelineWrapper.clientWidth * window.devicePixelRatio;
+      canvas.height = timelineWrapper.clientHeight * window.devicePixelRatio;
+      drawTimeline();
+    }
+    window.addEventListener('resize', resizeCanvas);
 
-    currentState.markers[draggedMarkerIdx] = newTimeMs;
-    currentState.markers.sort((a, b) => a - b);
-    draggedMarkerIdx = currentState.markers.indexOf(newTimeMs);
+    // Audio / Media Loading
+    async function loadMediaFile(file) {
+      if (!file) return;
 
-    renderWords();
-    updateOutput();
-    drawTimeline();
-  } else if (isScrubbing) {
-    seekToMouse(e);
-  }
-});
+      originalMediaFile = file;
+      fileNameDisplay.textContent = file.name;
+      video.src = URL.createObjectURL(file);
 
-window.addEventListener('mouseup', stopAllDragging);
-window.addEventListener('blur', stopAllDragging);
-window.addEventListener('mouseleave', (e) => {
-  if (e.target === document.documentElement) {
-    stopAllDragging();
-  }
-});
+      trimStartSec = 0;
+      trimEndSec = 0;
+      enableMiddleCut = false;
+      enableCutCheckbox.checked = false;
 
-function seekToMouse(e) {
-  if (!video.duration) return;
-  const rect = timelineWrapper.getBoundingClientRect();
-  const clickX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-  video.currentTime = (clickX / rect.width) * video.duration;
-}
+      resetDownloadButton();
 
-function addMarkerAtCurrentTime() {
-  if (currentState.markers.length >= words.length) return;
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        originalAudioBuffer = audioBuffer;
+        drawTimeline();
+      } catch (err) {
+        console.warn('Waveform decode bypassed:', err);
+        audioBuffer = null;
+        originalAudioBuffer = null;
+        drawTimeline();
+      }
+    }
 
-  const currentMs = Math.round(video.currentTime * 1000);
-  const nextState = JSON.parse(JSON.stringify(currentState));
-  nextState.markers.push(currentMs);
-  nextState.markers.sort((a, b) => a - b);
+    video.addEventListener('loadedmetadata', () => {
+      if (trimEndSec === 0 || trimEndSec > video.duration) {
+        trimEndSec = video.duration;
+        lastAppliedTrimEnd = video.duration;
+      }
+      
+      // Default middle cut setup
+      cutStartSec = video.duration * 0.4;
+      cutEndSec = video.duration * 0.6;
+      cutStartInput.value = cutStartSec.toFixed(1);
+      cutEndInput.value = cutEndSec.toFixed(1);
 
-  pushState(nextState);
-}
-
-sentenceInput.addEventListener('input', handleSentenceChange);
-sentenceInput.addEventListener('change', handleSentenceChange);
-
-function handleSentenceChange() {
-  const newText = sentenceInput.value.trim();
-  if (newText !== currentState.sentence) {
-    pushState({
-      sentence: newText,
-      markers: currentState.markers
+      updateTrimButtonState();
+      resizeCanvas();
     });
-  }
-}
 
-outputTimings.addEventListener('blur', parseTimingsFromInput);
-outputTimings.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    outputTimings.blur();
-  }
-});
+    mediaFileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) loadMediaFile(e.target.files[0]);
+    });
 
-function parseTimingsFromInput() {
-  const inputVal = outputTimings.value.trim();
-  if (!inputVal) return;
+    // FFmpeg Process: Trim & Cut Middle
+    async function processMediaWithFFmpeg() {
+      if (!originalMediaFile) return;
 
-  const intervals = inputVal.split(',').map(v => parseInt(v.trim(), 10)).filter(n => !isNaN(n));
-  if (intervals.length === 0) return;
+      const file = originalMediaFile;
+      const extension = file.name.split('.').pop().toLowerCase();
 
-  let cumulativeMs = 0;
-  const newMarkers = [];
-  for (let i = 0; i < intervals.length; i++) {
-    cumulativeMs += intervals[i];
-    newMarkers.push(cumulativeMs);
-  }
+      btnDownloadWebm.disabled = true;
+      btnDownloadWebm.textContent = '⏳ Initializing FFmpeg...';
 
-  pushState({
-    sentence: currentState.sentence,
-    markers: newMarkers
-  });
-}
+      try {
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        if (!ffmpeg) {
+          ffmpeg = createFFmpeg({
+            log: true,
+            logger: ({ message }) => {
+              console.log(message);
+              ffmpegLogs.push(message);
+            }
+          });
+        }
 
-window.addEventListener('keydown', (e) => {
-  if (document.activeElement === sentenceInput || document.activeElement === outputTimings) return;
+        if (!ffmpeg.isLoaded()) {
+          await ffmpeg.load();
+        }
 
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-    e.preventDefault();
-    if (e.shiftKey) {
-      redo();
-    } else {
-      undo();
+        ffmpeg.setProgress(({ ratio }) => {
+          const pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+          btnDownloadWebm.textContent = `⏳ Rendering Video (${pct}%)...`;
+        });
+
+        const inputName = `input_${Date.now()}.${extension}`;
+        const outputName = `output_${Date.now()}.webm`;
+
+        ffmpeg.FS('writeFile', inputName, await fetchFile(file));
+
+        const ffmpegArgs = [];
+
+        // Check if Middle Cut is active
+        if (enableMiddleCut && cutStartSec > trimStartSec && cutEndSec < trimEndSec && cutStartSec < cutEndSec) {
+          const s1 = trimStartSec.toFixed(3);
+          const e1 = cutStartSec.toFixed(3);
+          const s2 = cutEndSec.toFixed(3);
+          const e2 = trimEndSec.toFixed(3);
+
+          ffmpegArgs.push(
+            '-i', inputName,
+            '-filter_complex', `[0:v]trim=start=${s1}:end=${e1},setpts=PTS-STARTPTS[v1];[0:a]atrim=start=${s1}:end=${e1},asetpts=PTS-STARTPTS[a1];[0:v]trim=start=${s2}:end=${e2},setpts=PTS-STARTPTS[v2];[0:a]atrim=start=${s2}:end=${e2},asetpts=PTS-STARTPTS[a2];[v1][a1][v2][a2]concat=n=2:v=1:a=1[outv][outa]`,
+            '-map', '[outv]',
+            '-map', '[outa]',
+            '-c:v', 'libvpx-vp9',
+            '-deadline', 'realtime',
+            '-cpu-used', '8',
+            '-crf', '32',
+            '-b:v', '0',
+            '-pix_fmt', 'yuv420p',
+            '-c:a', 'libopus',
+            '-b:a', '96k',
+            '-y', outputName
+          );
+        } else {
+          // Outer Trim Only
+          if (trimStartSec > 0 || (video.duration && trimEndSec < video.duration)) {
+            ffmpegArgs.push('-ss', trimStartSec.toFixed(3));
+            ffmpegArgs.push('-to', trimEndSec.toFixed(3));
+          }
+
+          ffmpegArgs.push(
+            '-i', inputName,
+            '-vf', 'scale=-2:min(720\\,ih)',
+            '-c:v', 'libvpx-vp9',
+            '-deadline', 'realtime',
+            '-cpu-used', '8',
+            '-crf', '32',
+            '-b:v', '0',
+            '-pix_fmt', 'yuv420p',
+            '-c:a', 'libopus',
+            '-b:a', '96k',
+            '-y', outputName
+          );
+        }
+
+        await ffmpeg.run(...ffmpegArgs);
+
+        const data = ffmpeg.FS('readFile', outputName);
+        const blob = new Blob([data.buffer], { type: 'video/webm' });
+
+        if (convertedWebmBlobUrl) URL.revokeObjectURL(convertedWebmBlobUrl);
+        convertedWebmBlobUrl = URL.createObjectURL(blob);
+
+        const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        convertedFileName = `${baseName}_anki.webm`;
+
+        ffmpeg.FS('unlink', inputName);
+        ffmpeg.FS('unlink', outputName);
+
+        // Update active video preview
+        video.src = convertedWebmBlobUrl;
+        
+        lastAppliedTrimStart = 0;
+        lastAppliedTrimEnd = 0;
+        trimStartSec = 0;
+        trimEndSec = 0;
+        enableMiddleCut = false;
+        enableCutCheckbox.checked = false;
+
+        updateTrimButtonState();
+
+      } catch (err) {
+        console.error('FFmpeg error:', err);
+        btnDownloadWebm.disabled = false;
+        btnDownloadWebm.textContent = '❌ Failed (Click for Logs)';
+      }
     }
-  } else if (e.code === 'KeyA') {
-    e.preventDefault();
-    addMarkerAtCurrentTime();
-  } else if (e.code === 'Space') {
-    e.preventDefault();
-    togglePlay();
-  }
-});
 
-function togglePlay() {
-  if (video.paused) {
-    video.play();
-  } else {
-    video.pause();
-  }
-}
+    function resetDownloadButton() {
+      if (convertedWebmBlobUrl) {
+        URL.revokeObjectURL(convertedWebmBlobUrl);
+        convertedWebmBlobUrl = null;
+      }
+      convertedFileName = '';
+      ffmpegLogs = [];
+      updateTrimButtonState();
+    }
 
-btnPlay.addEventListener('click', togglePlay);
-
-function calculateIntervals(markers) {
-  if (!markers || markers.length === 0) return '0';
-  return markers.map((ms, idx) => {
-    if (idx === 0) return ms;
-    return Math.max(0, ms - markers[idx - 1]);
-  }).join(', ');
-}
-
-function updateOutput() {
-  outputTimings.value = calculateIntervals(currentState.markers);
-}
-
-function renderWords() {
-  wordsContainer.innerHTML = '';
-  words.forEach((word, idx) => {
-    const chip = document.createElement('div');
-    let className = 'word-chip';
-    if (currentState.markers[idx] !== undefined) className += ' marked';
-
-    chip.className = className;
-    chip.innerHTML = `
-      <span>${word}</span>
-      ${currentState.markers[idx] !== undefined ? `<span class="time-tag">${(currentState.markers[idx] / 1000).toFixed(2)}s</span>` : ''}
-    `;
-
-    chip.addEventListener('click', () => {
-      if (currentState.markers[idx] !== undefined) {
-        video.currentTime = currentState.markers[idx] / 1000;
+    btnDownloadWebm.addEventListener('click', () => {
+      if (isTrimOrCutModified()) {
+        processMediaWithFFmpeg();
+      } else if (convertedWebmBlobUrl || (originalMediaFile && originalMediaFile.name.toLowerCase().endsWith('.webm'))) {
+        const downloadUrl = convertedWebmBlobUrl || video.src;
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = convertedFileName || originalMediaFile.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }
     });
 
-    chip.addEventListener('mouseenter', () => {
-      hoveredWordIdx = idx;
+    btnRevertTrim.addEventListener('click', () => {
+      if (!originalMediaFile) return;
+      video.src = URL.createObjectURL(originalMediaFile);
+      audioBuffer = originalAudioBuffer;
+      trimStartSec = 0;
+      trimEndSec = video.duration || 0;
+      enableMiddleCut = false;
+      enableCutCheckbox.checked = false;
+      resetDownloadButton();
       drawTimeline();
     });
 
-    chip.addEventListener('mouseleave', () => {
-      hoveredWordIdx = null;
+    // --- TIMELINE CANVAS RENDERING ---
+    function drawTimeline() {
+      const w = canvas.width;
+      const h = canvas.height;
+      const scale = window.devicePixelRatio;
+      const duration = video.duration || 1;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#0a0c10';
+      ctx.fillRect(0, 0, w, h);
+
+      // Render Audio Waveform
+      if (audioBuffer) {
+        const rawData = audioBuffer.getChannelData(0);
+        const step = Math.ceil(rawData.length / w);
+        const amp = h / 2;
+
+        ctx.fillStyle = '#262c3a';
+        for (let i = 0; i < w; i++) {
+          let min = 1.0, max = -1.0;
+          for (let j = 0; j < step; j++) {
+            const datum = rawData[(i * step) + j];
+            if (datum < min) min = datum;
+            if (datum > max) max = datum;
+          }
+          ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+        }
+      }
+
+      // Outer Trim Dimmed Regions
+      const startX = (trimStartSec / duration) * w;
+      const endX = (trimEndSec / duration) * w;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      if (startX > 0) ctx.fillRect(0, 0, startX, h);
+      if (endX < w) ctx.fillRect(endX, 0, w - endX, h);
+
+      // Outer Trim Handles
+      const handleWidth = 8 * scale;
+      ctx.fillStyle = (hoveredHandle === 'trimStart' || draggedHandle === 'trimStart') ? '#38ef7d' : '#0066ff';
+      ctx.fillRect(startX, 0, handleWidth, h);
+
+      ctx.fillStyle = (hoveredHandle === 'trimEnd' || draggedHandle === 'trimEnd') ? '#38ef7d' : '#0066ff';
+      ctx.fillRect(endX - handleWidth, 0, handleWidth, h);
+
+      // Middle Cut Region Visual
+      if (enableMiddleCut && cutEndSec > cutStartSec) {
+        const cutX1 = (cutStartSec / duration) * w;
+        const cutX2 = (cutEndSec / duration) * w;
+
+        // Cut Fill Red Striped
+        ctx.fillStyle = 'rgba(255, 71, 87, 0.35)';
+        ctx.fillRect(cutX1, 0, cutX2 - cutX1, h);
+
+        // Cut Border Handles
+        ctx.fillStyle = (hoveredHandle === 'cutStart' || draggedHandle === 'cutStart') ? '#ffffff' : '#ff4757';
+        ctx.fillRect(cutX1, 0, 4 * scale, h);
+
+        ctx.fillStyle = (hoveredHandle === 'cutEnd' || draggedHandle === 'cutEnd') ? '#ffffff' : '#ff4757';
+        ctx.fillRect(cutX2 - (4 * scale), 0, 4 * scale, h);
+
+        ctx.fillStyle = '#ff4757';
+        ctx.font = `bold ${10 * scale}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText('CUT OUT', (cutX1 + cutX2) / 2, h / 2);
+      }
+
+      // Clip Markers (Front & Back)
+      drawMarker(frontStartSec, duration, w, h, scale, '#2ed573', 'Front', hoveredHandle === 'front' || draggedHandle === 'front');
+      drawMarker(backStartSec, duration, w, h, scale, '#8b5cf6', 'Back', hoveredHandle === 'back' || draggedHandle === 'back');
+
+      // Playhead
+      const curTime = video.currentTime || 0;
+      const playheadX = (curTime / duration) * w;
+
+      ctx.strokeStyle = '#00f2fe';
+      ctx.lineWidth = 2 * scale;
+      ctx.beginPath();
+      ctx.moveTo(playheadX, 0);
+      ctx.lineTo(playheadX, h);
+      ctx.stroke();
+
+      ctx.fillStyle = '#00f2fe';
+      ctx.beginPath();
+      ctx.arc(playheadX, 6 * scale, 5 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawMarker(sec, duration, w, h, scale, color, label, isHovered) {
+      if (sec < 0 || sec > duration) return;
+      const x = (sec / duration) * w;
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = (isHovered ? 3 : 2) * scale;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+
+      // Flag handle top
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, 10 * scale, (isHovered ? 8 : 6) * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#000';
+      ctx.font = `bold ${8 * scale}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(label[0], x, 13 * scale);
+    }
+
+    function animate() {
+      drawTimeline();
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+
+    // Interactive Dragging on Timeline
+    function getHandleAtPos(clientX, clientY) {
+      if (!video.duration) return null;
+      const rect = timelineWrapper.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const duration = video.duration;
+
+      const tStart = (trimStartSec / duration) * rect.width;
+      const tEnd = (trimEndSec / duration) * rect.width;
+      const fX = (frontStartSec / duration) * rect.width;
+      const bX = (backStartSec / duration) * rect.width;
+
+      if (Math.abs(x - fX) <= 10) return 'front';
+      if (Math.abs(x - bX) <= 10) return 'back';
+      if (Math.abs(x - tStart) <= 10) return 'trimStart';
+      if (Math.abs(x - tEnd) <= 10) return 'trimEnd';
+
+      if (enableMiddleCut) {
+        const cStart = (cutStartSec / duration) * rect.width;
+        const cEnd = (cutEndSec / duration) * rect.width;
+        if (Math.abs(x - cStart) <= 10) return 'cutStart';
+        if (Math.abs(x - cEnd) <= 10) return 'cutEnd';
+      }
+
+      return null;
+    }
+
+    timelineWrapper.addEventListener('mousedown', (e) => {
+      const handle = getHandleAtPos(e.clientX, e.clientY);
+      if (handle !== null) {
+        draggedHandle = handle;
+        if (!video.paused) video.pause();
+      } else {
+        isScrubbing = true;
+        seekToMouse(e);
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      const rect = timelineWrapper.getBoundingClientRect();
+      const handle = getHandleAtPos(e.clientX, e.clientY);
+      hoveredHandle = (draggedHandle !== null) ? draggedHandle : handle;
+
+      timelineWrapper.style.cursor = (hoveredHandle !== null) ? 'ew-resize' : 'pointer';
+
+      if (draggedHandle !== null && video.duration) {
+        const mouseX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+        const time = (mouseX / rect.width) * video.duration;
+
+        if (draggedHandle === 'trimStart') trimStartSec = Math.max(0, Math.min(time, trimEndSec - 0.2));
+        if (draggedHandle === 'trimEnd') trimEndSec = Math.max(trimStartSec + 0.2, Math.min(time, video.duration));
+        
+        if (draggedHandle === 'cutStart') {
+          cutStartSec = Math.max(trimStartSec, Math.min(time, cutEndSec - 0.2));
+          cutStartInput.value = cutStartSec.toFixed(1);
+        }
+        if (draggedHandle === 'cutEnd') {
+          cutEndSec = Math.max(cutStartSec + 0.2, Math.min(time, trimEndSec));
+          cutEndInput.value = cutEndSec.toFixed(1);
+        }
+
+        if (draggedHandle === 'front') {
+          frontStartSec = time;
+          frontTimeInput.value = frontStartSec.toFixed(1);
+          updateTimingString();
+        }
+        if (draggedHandle === 'back') {
+          backStartSec = time;
+          backTimeInput.value = backStartSec.toFixed(1);
+          updateTimingString();
+        }
+
+        updateTrimButtonState();
+      } else if (isScrubbing) {
+        seekToMouse(e);
+      }
+    });
+
+    function stopDragging() {
+      draggedHandle = null;
+      isScrubbing = false;
+      updateTrimButtonState();
+    }
+
+    window.addEventListener('mouseup', stopDragging);
+
+    function seekToMouse(e) {
+      if (!video.duration) return;
+      const rect = timelineWrapper.getBoundingClientRect();
+      const clickX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+      video.currentTime = (clickX / rect.width) * video.duration;
+    }
+
+    // Input handlers
+    frontTimeInput.addEventListener('input', () => {
+      frontStartSec = parseFloat(frontTimeInput.value) || 0;
+      updateTimingString();
       drawTimeline();
     });
 
-    wordsContainer.appendChild(chip);
-  });
-}
+    backTimeInput.addEventListener('input', () => {
+      backStartSec = parseFloat(backTimeInput.value) || 0;
+      updateTimingString();
+      drawTimeline();
+    });
 
-btnCopy.addEventListener('click', () => {
-  navigator.clipboard.writeText(outputTimings.value).then(() => {
-    toast.textContent = 'Copied to Clipboard!';
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2000);
-  });
-});
+    enableCutCheckbox.addEventListener('change', (e) => {
+      enableMiddleCut = e.target.checked;
+      cutStartInput.disabled = !enableMiddleCut;
+      cutEndInput.disabled = !enableMiddleCut;
+      updateTrimButtonState();
+      drawTimeline();
+    });
 
-pushState({
-  sentence: sentenceInput.value.trim(),
-  markers: []
-});
-resizeCanvas();
+    cutStartInput.addEventListener('input', () => {
+      cutStartSec = parseFloat(cutStartInput.value) || 0;
+      updateTrimButtonState();
+      drawTimeline();
+    });
+
+    cutEndInput.addEventListener('input', () => {
+      cutEndSec = parseFloat(cutEndInput.value) || 0;
+      updateTrimButtonState();
+      drawTimeline();
+    });
+
+    btnSetFront.addEventListener('click', () => {
+      frontStartSec = video.currentTime;
+      frontTimeInput.value = frontStartSec.toFixed(1);
+      updateTimingString();
+      drawTimeline();
+    });
+
+    btnSetBack.addEventListener('click', () => {
+      backStartSec = video.currentTime;
+      backTimeInput.value = backStartSec.toFixed(1);
+      updateTimingString();
+      drawTimeline();
+    });
+
+    // Preview Buttons
+    function playClip(startTimeSec, durationSec = 5) {
+      if (!video) return;
+      video.currentTime = startTimeSec;
+      video.play();
+
+      function checkTime() {
+        if (video.currentTime >= startTimeSec + durationSec) {
+          video.pause();
+          video.removeEventListener('timeupdate', checkTime);
+        }
+      }
+      video.addEventListener('timeupdate', checkTime);
+    }
+
+    btnPreviewFront.addEventListener('click', () => playClip(frontStartSec, 5));
+    btnPreviewBack.addEventListener('click', () => playClip(backStartSec, 5));
+
+    btnPlay.addEventListener('click', () => {
+      if (video.paused) video.play(); else video.pause();
+    });
+
+    btnCopy.addEventListener('click', () => {
+      navigator.clipboard.writeText(outputTiming.value).then(() => {
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2000);
+      });
+    });
+
+    // Hotkeys
+    window.addEventListener('keydown', (e) => {
+      if (document.activeElement.tagName === 'INPUT') return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (video.paused) video.play(); else video.pause();
+      } else if (e.code === 'Digit1') {
+        btnSetFront.click();
+      } else if (e.code === 'Digit2') {
+        btnSetBack.click();
+      }
+    });
+
+    // Drag and Drop
+    window.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      dragCounter++;
+      dropOverlay.classList.add('active');
+    });
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        dropOverlay.classList.remove('active');
+      }
+    });
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      dropOverlay.classList.remove('active');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) loadMediaFile(e.dataTransfer.files[0]);
+    });
   </script>
 </body>
 </html>
