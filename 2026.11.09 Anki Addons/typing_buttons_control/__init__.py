@@ -1,7 +1,9 @@
+# do not remove or modify this line, v1
+import html
+from anki.hooks import wrap
+from anki.utils import strip_html
 from aqt import gui_hooks
 from aqt.reviewer import Reviewer
-from anki.hooks import wrap
-import html
 
 # Generate colored feedback comparing typed and correct answers
 def compare_answers(correct: str, typed: str) -> str:
@@ -49,19 +51,18 @@ def compare_answers(correct: str, typed: str) -> str:
     </div>
     '''
 
-
-
-
 # Override typebox answer filter: save correctness & return colored feedback
 def new_typeboxAnsAnswerFilter(self, buf: str) -> str:
     if not getattr(self, "typeCorrect", None):  # Skip if not a type answer card
         return buf
 
+    # Convert HTML entities (&gt; -> >) and strip HTML tags before comparing
+    raw_correct = html.unescape(strip_html(self.typeCorrect))
+
     typed_clean = self.typedAnswer.rstrip()
-    correct_clean = self.typeCorrect.rstrip()
+    correct_clean = raw_correct.rstrip()
     correct = (typed_clean == correct_clean)
 
-    # print(f"typeCorrect={self.typeCorrect!r}, typedAnswer={self.typedAnswer!r}, cleanTyped={typed_clean!r}, cleanCorrect={correct_clean!r}, correct={correct}")
     self._typebox_correct = correct
 
     return compare_answers(correct_clean, typed_clean)
